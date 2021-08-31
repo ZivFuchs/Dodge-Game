@@ -4,8 +4,10 @@ let GAME_DIMENSION = 1000;
 let PLAYER_SIZE = GAME_DIMENSION * 0.05;
 let PLAYER_VELOCITY = PLAYER_SIZE * 15;
 let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
+let PROJECTILE_FREQUENCY = 1;
 
 let projectiles = [];
+let points = 0;
 
 class Player {
     constructor() {
@@ -35,6 +37,11 @@ class Player {
         }
         
         // check each projectile for collission
+        for (let i = 0; i < projectiles.length; i++) {
+            if ((projectiles[i].x >= player.x && projectiles[i].x <= player.x + PLAYER_SIZE) && (projectiles[i].y >= player.y && projectiles[i].y <= player.y + PLAYER_SIZE)) {
+                gameOver = true;
+            }
+        }
     }
 
     draw() {
@@ -47,32 +54,33 @@ class Player {
 
 class Projectile {
     constructor(player) {
+        this.size = PROJECTILE_SIZE * randomNumberFromRange(0.5, 1.5);
         switch(Math.floor(randomNumberFromRange(0,3))) {
             // above battlefield
             case 0:
-                this.x = (Math.random() * (GAME_DIMENSION + (2 * PROJECTILE_SIZE))) - PROJECTILE_SIZE;
-                this.y = -2 * PROJECTILE_SIZE;
+                this.x = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
+                this.y = -2 * this.size;
                 break;
             // right of battlefield
             case 1:
-                this.x = GAME_DIMENSION + (2 * PROJECTILE_SIZE);
-                this.y = (Math.random() * (GAME_DIMENSION + (2 * PROJECTILE_SIZE))) - PROJECTILE_SIZE;
+                this.x = GAME_DIMENSION + (2 * this.size);
+                this.y = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
                 break;
             // below battlefield
             case 2:
-                this.x = (Math.random() * (GAME_DIMENSION + (2 * PROJECTILE_SIZE))) - PROJECTILE_SIZE;
-                this.y = GAME_DIMENSION + (2 * PROJECTILE_SIZE);
+                this.x = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
+                this.y = GAME_DIMENSION + (2 * this.size);
                 break;
             // left of battlefield
             case 3:
-                this.x = -2 * PROJECTILE_SIZE;
-                this.y = (Math.random() * (GAME_DIMENSION + (2 * PROJECTILE_SIZE))) - PROJECTILE_SIZE;
+                this.x = -2 * this.size;
+                this.y = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
                 break;
         }
 
         // let timeUntilPlayer = (randomNumberFromRange(50, 100));
         // let timeUntilPlayer = 100;
-        let timeUntilPlayer = randomNumberFromRange(2, 3);
+        let timeUntilPlayer = randomNumberFromRange(1, 2);
         this.dx = (player.x - this.x) / timeUntilPlayer;
         this.dy = (player.y - this.y) / timeUntilPlayer;
         this.checkDeletion = false;
@@ -93,7 +101,7 @@ class Projectile {
         // change fillstyle to appropriate
         ctx.fillStyle = "red";
         // draw
-        ctx.fillRect(this.x, this.y, PROJECTILE_SIZE, PROJECTILE_SIZE);
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
@@ -155,6 +163,7 @@ document.addEventListener('keyup', (e) => {
 
     if (indexToRemove > -1) {
         held_directions.splice(indexToRemove, 1);
+        points += 1;
     }
 });
 
@@ -173,17 +182,17 @@ function randomNumberFromRange(min, max) {
 let lastRenderTime = 0;
 let gameOver = false;
 
-for (let i = 0; i < 5; i++) {
-    projectiles.push(new Projectile(player));
-}
-
 function main(currentTime) {
     
     window.requestAnimationFrame(main);
     const deltaTime = (currentTime - lastRenderTime) / 1000;
-    
+
     // if (deltaTime < 1 / framesPerSecond) return;
-    if (randomNumberFromRange(0, 100) > 99.999) {
+    // if (randomNumberFromRange(0, 100) > 95) {
+    //     projectiles.push(new Projectile(player));
+    // }
+
+    if (Math.random() * PROJECTILE_FREQUENCY > 0.99 ) {
         projectiles.push(new Projectile(player));
     }
     lastRenderTime = currentTime;
@@ -211,10 +220,30 @@ function main(currentTime) {
         ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
             // draw character
         player.draw();
-
+            // draw projectiles 
         for (let i = 0; i < projectiles.length; i++) {
             projectiles[i].draw();
         }
+            // draw score
+
+     // increase projectile frequency and size
+    PROJECTILE_FREQUENCY += 0.001 * deltaTime;
+    PROJECTILE_SIZE += 0.001 * deltaTime;
+
+    if (gameOver) {
+        if (confirm("Press any key to continue")) {
+            // restart the game
+            gameOver = false;
+            let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
+            let PROJECTILE_FREQUENCY = 1;
+
+            projectiles = [];
+            
+            this.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
+            this.y = this.x;
+        }
+    }
+
 }
 
 window.requestAnimationFrame(main);
