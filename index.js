@@ -140,7 +140,7 @@ canvas.height = GAME_DIMENSION;
 // this array is used to manage which direction the player is moving
 let held_directions = [];
 
-// this keydown event listener is used to control the player
+// this keydown event listener is used to control the player, and reset the game
 document.addEventListener('keydown', (e) => {
     switch(e.code)
     {
@@ -163,6 +163,30 @@ document.addEventListener('keydown', (e) => {
             if (held_directions.indexOf('D') === -1) {
                 held_directions.unshift('D');
             }
+            break;
+        case 'Enter':
+            // if the user hits enter, restart the game
+            gameOver = false;
+
+            // reset projectile size and frequency
+            let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
+            PROJECTILE_FREQUENCY = 1;
+
+            // reset projectiles and held_directions arrays
+            projectiles = [];
+            held_directions = [];
+            
+            // recenter the player
+            player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
+            player.y = player.x;
+
+            // output points to console
+            console.log(points);
+
+            // reset points to 0
+            points = 0;
+
+            window.requestAnimationFrame(main);
             break;
     }
 });
@@ -189,7 +213,6 @@ document.addEventListener('keyup', (e) => {
 
     if (indexToRemove > -1) {
         held_directions.splice(indexToRemove, 1);
-        points += 1;
     }
 });
 
@@ -209,72 +232,68 @@ let lastRenderTime = 0;
 let gameOver = false;
 
 function main(currentTime) {
+
+    if (!gameOver) {
+        window.requestAnimationFrame(main);
+        const deltaTime = (currentTime - lastRenderTime) / 1000;
     
-    window.requestAnimationFrame(main);
-    const deltaTime = (currentTime - lastRenderTime) / 1000;
-
-    // if (deltaTime < 1 / framesPerSecond) return;
-    // if (randomNumberFromRange(0, 100) > 95) {
-    //     projectiles.push(new Projectile(player));
-    // }
-
-    if (Math.random() * PROJECTILE_FREQUENCY > 0.99 ) {
-        projectiles.push(new Projectile(player));
-    }
-    lastRenderTime = currentTime;
-
-    player.update(deltaTime);
+        // if (deltaTime < 1 / framesPerSecond) return;
+        // if (randomNumberFromRange(0, 100) > 95) {
+        //     projectiles.push(new Projectile(player));
+        // }
     
-    for (let i = 0; i < projectiles.length; i++) {
-        // update position
-        projectiles[i].update(deltaTime)
-        // delete if projectile left screen
-        if (projectiles[i].checkDeletion) {
-            if (projectiles[i].x > GAME_DIMENSION || projectiles[i].x < 0 || projectiles[i].y > GAME_DIMENSION || projectiles[i].y < 0) {
-                projectiles.splice(i, 1);
+        if (Math.random() * PROJECTILE_FREQUENCY > 0.99 ) {
+            projectiles.push(new Projectile(player));
+        }
+        lastRenderTime = currentTime;
+    
+        player.update(deltaTime);
+        
+        for (let i = 0; i < projectiles.length; i++) {
+            // update position
+            projectiles[i].update(deltaTime)
+            // delete if projectile left screen, and increment points
+            if (projectiles[i].checkDeletion) {
+                if (projectiles[i].x > GAME_DIMENSION || projectiles[i].x < 0 || projectiles[i].y > GAME_DIMENSION || projectiles[i].y < 0) {
+                    projectiles.splice(i, 1);
+                    points += 1;
+                }
             }
         }
-    }
+    
+        // loop the character around the battlefield
+        if (player.x + PLAYER_SIZE < 0) player.x = GAME_DIMENSION;
+        if (player.x > GAME_DIMENSION )player.x = 0 - PLAYER_SIZE;
+        if (player.y + PLAYER_SIZE < 0) player.y = GAME_DIMENSION;
+        if (player.y > GAME_DIMENSION) player.y = 0 - PLAYER_SIZE;
+    
+            // draw
+                // clear canvas
+            ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
+                // draw character
+            player.draw();
+                // draw projectiles 
+            for (let i = 0; i < projectiles.length; i++) {
+                projectiles[i].draw();
+            }
+                // draw score
+    
+         // increase projectile frequency and size
+        PROJECTILE_FREQUENCY += 0.001 * deltaTime;
+        PROJECTILE_SIZE += 0.001 * deltaTime;
+    } else {
+        console.log("DEAD");
+        // if the player dies, restart the game
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
 
-    // loop the character around the battlefield
-    if (player.x + PLAYER_SIZE < 0) player.x = GAME_DIMENSION;
-    if (player.x > GAME_DIMENSION )player.x = 0 - PLAYER_SIZE;
-    if (player.y + PLAYER_SIZE < 0) player.y = GAME_DIMENSION;
-    if (player.y > GAME_DIMENSION) player.y = 0 - PLAYER_SIZE;
-
-        // draw
-            // clear canvas
-        ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
-            // draw character
-        player.draw();
-            // draw projectiles 
-        for (let i = 0; i < projectiles.length; i++) {
-            projectiles[i].draw();
-        }
-            // draw score
-
-     // increase projectile frequency and size
-    PROJECTILE_FREQUENCY += 0.001 * deltaTime;
-    PROJECTILE_SIZE += 0.001 * deltaTime;
-
-    // if the player dies, restart the game
-    if (gameOver) {
-        gameOver = false;
-        // reset projectile size and frequency
-        let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
-        PROJECTILE_FREQUENCY = 1;
-
-        // reset projectiles and held_directions arrays
-        projectiles = [];
-        held_directions = [];
-        
-        // recenter the player
-        player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
-        player.y = player.x;
-        console.log(points);
-
-        // reset points to 0
-        points = 0;
+        ctx.font = "30px Futura";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        //ctx.fillText("GAME OVER\nPoints: " + points + "\nTo restart, press ENTER", GAME_DIMENSION/2, GAME_DIMENSION/2);
+        ctx.fillText("GAME OVER", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50);
+        ctx.fillText("POINTS: " + points, GAME_DIMENSION/2, GAME_DIMENSION/2);
+        ctx.fillText("TO RESTART, PRESS ENTER", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
     }
 }
 
