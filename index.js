@@ -11,6 +11,11 @@ let PROJECTILE_FREQUENCY = 1;
 let projectiles = [];
 let points = 0;
 
+// initailze lastRenderTime and gameOver, lastRenderTime will be overwritten with current time when game starts
+let lastRenderTime = 0;
+let gameOver = false;
+let start = Date.now();
+
 class Player {
     constructor() {
         // place player in the center of the battlefield
@@ -114,21 +119,35 @@ class Projectile {
     }
 }
 
-// async function test() {
-//     console.log("waiting for press");
-//     await waitingKeyPress();
-//     console.log('good job!');
-// }
+async function titleScreen() {
+    ctx.fillstyle = "black"
+    ctx.textAlign = "center"
+    
+    ctx.font = "60px Futura"
+    ctx.fillText("DODGE GAME", GAME_DIMENSION/2, 100);
 
-// function waitingKeyPres() {
-//     return new Promise((resolve) => {
-//         document.addEventListener('keydown', onKeyHandler);
-//         function onKeyHandler(e) {
-//             document.removeEventListener('keydown', onKeyHandler);
-//             resolve();
-//         }
-//     });
-// }
+    ctx.font = "30px Futura"
+    ctx.fillText("AVOID THE PROJECTILES AS LONG AS POSSIBLE", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50);
+    ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2);
+    ctx.fillText("PRESS ANY KEY TO BEGIN", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
+
+
+
+    await waitingKeypress();
+}
+
+function waitingKeypress() {
+    return new Promise((resolve) => {
+        document.addEventListener('keydown', onKeyHandler);
+
+        function onKeyHandler(e) {
+            document.removeEventListener('keydown', onKeyHandler);
+            resolve();
+            lastRenderTime = (Date.now() - start);
+            window.requestAnimationFrame(main);
+        }
+    })
+}
 
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
 
@@ -180,9 +199,6 @@ document.addEventListener('keydown', (e) => {
             player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
             player.y = player.x;
 
-            // output points to console
-            console.log(points);
-
             // reset points to 0
             points = 0;
 
@@ -228,19 +244,12 @@ function randomNumberFromRange(min, max) {
         // draw character
         // draw projectiles
 
-let lastRenderTime = 0;
-let gameOver = false;
+
 
 function main(currentTime) {
-
     if (!gameOver) {
         window.requestAnimationFrame(main);
         const deltaTime = (currentTime - lastRenderTime) / 1000;
-    
-        // if (deltaTime < 1 / framesPerSecond) return;
-        // if (randomNumberFromRange(0, 100) > 95) {
-        //     projectiles.push(new Projectile(player));
-        // }
     
         if (Math.random() * PROJECTILE_FREQUENCY > 0.99 ) {
             projectiles.push(new Projectile(player));
@@ -262,10 +271,18 @@ function main(currentTime) {
         }
     
         // loop the character around the battlefield
-        if (player.x + PLAYER_SIZE < 0) player.x = GAME_DIMENSION;
-        if (player.x > GAME_DIMENSION )player.x = 0 - PLAYER_SIZE;
-        if (player.y + PLAYER_SIZE < 0) player.y = GAME_DIMENSION;
-        if (player.y > GAME_DIMENSION) player.y = 0 - PLAYER_SIZE;
+        if (player.x + PLAYER_SIZE < 0) {
+            player.x = GAME_DIMENSION;
+        }
+        if (player.x > GAME_DIMENSION ){
+            player.x = 0 - PLAYER_SIZE;
+        }
+        if (player.y + PLAYER_SIZE < 0) {
+            player.y = GAME_DIMENSION;
+        }
+        if (player.y > GAME_DIMENSION) {
+            player.y = 0 - PLAYER_SIZE;
+        }
     
             // draw
                 // clear canvas
@@ -282,19 +299,21 @@ function main(currentTime) {
         PROJECTILE_FREQUENCY += 0.001 * deltaTime;
         PROJECTILE_SIZE += 0.001 * deltaTime;
     } else {
-        console.log("DEAD");
-        // if the player dies, restart the game
+        // if the player dies, display gameover screen
+
+        // reset the canvas to a white rectangle
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
 
+        // display gameover message in 30 point Futura black to the center of the screen
         ctx.font = "30px Futura";
         ctx.fillStyle = "black";
         ctx.textAlign = "center";
-        //ctx.fillText("GAME OVER\nPoints: " + points + "\nTo restart, press ENTER", GAME_DIMENSION/2, GAME_DIMENSION/2);
         ctx.fillText("GAME OVER", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50);
         ctx.fillText("POINTS: " + points, GAME_DIMENSION/2, GAME_DIMENSION/2);
-        ctx.fillText("TO RESTART, PRESS ENTER", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
+        ctx.fillText("TO START OVER, PRESS ENTER", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
     }
 }
 
-window.requestAnimationFrame(main);
+titleScreen();
+// window.requestAnimationFrame(main);
