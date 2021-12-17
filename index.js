@@ -1,3 +1,5 @@
+// potential changes: move projectile collision logic to projectile.update(), sound (background music, each projectile makes noise, death noise)
+
 const framesPerSecond = 60;
 
 // declare constants
@@ -42,8 +44,22 @@ class Player {
                 player.x += player.velocity * deltaTime;
                 break;
         }
+
+        // loop the character around the battlefield
+        if (player.x + PLAYER_SIZE < 0) {
+            player.x = GAME_DIMENSION;
+        }
+        if (player.x > GAME_DIMENSION ){
+            player.x = 0 - PLAYER_SIZE;
+        }
+        if (player.y + PLAYER_SIZE < 0) {
+            player.y = GAME_DIMENSION;
+        }
+        if (player.y > GAME_DIMENSION) {
+            player.y = 0 - PLAYER_SIZE;
+        }
         
-        // check each projectile for collission
+        // check each projectile for collision
         for (let i = 0; i < projectiles.length; i++) {
             if ((projectiles[i].x + projectiles[i].size >= player.x && projectiles[i].x <= player.x + PLAYER_SIZE) && (projectiles[i].y + projectiles[i].size >= player.y && projectiles[i].y <= player.y + PLAYER_SIZE)) {
                 gameOver = true;
@@ -87,9 +103,6 @@ class Projectile {
                 break;
         }
 
-        // let timeUntilPlayer = (randomNumberFromRange(50, 100));
-        // let timeUntilPlayer = 100;
-
         // randomly assigne ach projectile a speed
         let timeUntilPlayer = randomNumberFromRange(1, 2);
         this.dx = (player.x - this.x) / timeUntilPlayer;
@@ -130,8 +143,6 @@ async function titleScreen() {
     ctx.fillText("AVOID THE PROJECTILES AS LONG AS POSSIBLE", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50);
     ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2);
     ctx.fillText("PRESS ANY KEY TO BEGIN", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
-
-
 
     await waitingKeypress();
 }
@@ -236,17 +247,11 @@ function randomNumberFromRange(min, max) {
     return (Math.random() * (max - min + 1) + min);
 }
 
-// game loop
-    // initiaLize
-    // update
-    // draw
-        // clear canvas
-        // draw character
-        // draw projectiles
-
-
-
 function main(currentTime) {
+    // at the beginning of each frame, clear the canvas
+    ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
+
+    // if the game isn't over, perform all necessary actions
     if (!gameOver) {
         window.requestAnimationFrame(main);
         const deltaTime = (currentTime - lastRenderTime) / 1000;
@@ -270,23 +275,11 @@ function main(currentTime) {
             }
         }
     
-        // loop the character around the battlefield
-        if (player.x + PLAYER_SIZE < 0) {
-            player.x = GAME_DIMENSION;
-        }
-        if (player.x > GAME_DIMENSION ){
-            player.x = 0 - PLAYER_SIZE;
-        }
-        if (player.y + PLAYER_SIZE < 0) {
-            player.y = GAME_DIMENSION;
-        }
-        if (player.y > GAME_DIMENSION) {
-            player.y = 0 - PLAYER_SIZE;
-        }
+
     
             // draw
                 // clear canvas
-            ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
+
                 // draw character
             player.draw();
                 // draw projectiles 
@@ -294,16 +287,16 @@ function main(currentTime) {
                 projectiles[i].draw();
             }
                 // draw score
+                ctx.font = "30px Futura";
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.fillText("POINTS: " + points, 875, 975);
     
          // increase projectile frequency and size
         PROJECTILE_FREQUENCY += 0.001 * deltaTime;
         PROJECTILE_SIZE += 0.001 * deltaTime;
     } else {
-        // if the player dies, display gameover screen
-
-        // reset the canvas to a white rectangle
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
+        // if the game is over, display gameover screen
 
         // display gameover message in 30 point Futura black to the center of the screen
         ctx.font = "30px Futura";
@@ -316,4 +309,3 @@ function main(currentTime) {
 }
 
 titleScreen();
-// window.requestAnimationFrame(main);
