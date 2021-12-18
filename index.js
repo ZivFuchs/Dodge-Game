@@ -10,6 +10,7 @@ let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
 let PROJECTILE_FREQUENCY = 1;
 let HOMING_FREQUENCY = 1;
 let ACCELERATION = 1;
+let GROW_SPEED = 10;
 
 // initialize list of projectiles to be empty, points to be 0
 let projectiles = [];
@@ -278,6 +279,36 @@ class AcceleratingProjectile extends Projectile {
     }
 }
 
+class GrowingProjectile extends Projectile {
+    update(deltaTime) {
+        // update position
+        this.x += this.dx * deltaTime;
+        this.y += this.dy * deltaTime;
+        // check for collision?
+
+        // if the projectile has entered the battlefield, start checking it for deletion  
+        if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
+            this.check = true
+        }
+
+        // check if projectile has left the battlefield
+        if (this.check) {
+            if (this.x > GAME_DIMENSION || this.x + this.size < 0 || this.y > GAME_DIMENSION || this.y + this.size < 0) {
+                points += 3;
+                return true;
+            }
+        }
+
+        this.size += GROW_SPEED * deltaTime;
+    }
+
+    draw() {
+        // draw the projectile as a green square
+        ctx.fillStyle = `rgb(0, 142, 5)`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
 
 // retrieve the canvas and set its dimensions
@@ -388,7 +419,8 @@ function main(currentTime) {
             // projectiles.push(new Projectile(player));
             // projectiles.push(new BouncyProjectile(player));
             // projectiles.push(new HomingProjectile(player));
-            projectiles.push(new AcceleratingProjectile(player));
+            // projectiles.push(new AcceleratingProjectile(player));
+            projectiles.push(new GrowingProjectile(player));
         }
 
         lastRenderTime = currentTime;

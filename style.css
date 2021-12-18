@@ -3,7 +3,8 @@ body {
 }
 
 canvas {
-    border: 10px solid #FFC300;
+    /* border: 10px solid #FFC300; */
+    border: 10px solid black;
     background-color: white;
     width: 750px;
     height: 750px;
