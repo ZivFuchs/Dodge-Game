@@ -1,4 +1,4 @@
-// potential changes: move projectile collision logic to projectile.update(), sound (background music, each projectile makes noise, death noise)
+// potential changes: sound (background music, each projectile makes noise, death noise, bounce noise)
 
 const framesPerSecond = 60;
 
@@ -13,7 +13,7 @@ let PROJECTILE_FREQUENCY = 1;
 let projectiles = [];
 let points = 0;
 
-// initailze lastRenderTime and gameOver, lastRenderTime will be overwritten with current time when game starts
+// initailze lastRenderTime, gameOver, and start, lastRenderTime will be overwritten with current time when game starts
 let lastRenderTime = 0;
 let gameOver = false;
 let start = Date.now();
@@ -49,7 +49,7 @@ class Player {
         if (player.x + PLAYER_SIZE < 0) {
             player.x = GAME_DIMENSION;
         }
-        if (player.x > GAME_DIMENSION ){
+        if (player.x > GAME_DIMENSION) {
             player.x = 0 - PLAYER_SIZE;
         }
         if (player.y + PLAYER_SIZE < 0) {
@@ -119,15 +119,22 @@ class Projectile {
         // check for collision?
 
         // if the projectile has entered the battlefield, start checking it for deletion  
-        if (this.x < GAME_DIMENSION && this.x > 0 && this.y <GAME_DIMENSION && this.y > 0) {
+        if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
             this.check = true
+        }
+
+        // check if projectile has left the battlefield
+        if (this.check) {
+            if (this.x > GAME_DIMENSION || this.x < 0 || this.y > GAME_DIMENSION || this.y < 0) {
+                points += 1;
+                return true;
+            }
         }
     }
 
     draw() {
-        // change fillstyle to red
+        // draw the projectile as a red square
         ctx.fillStyle = "red";
-        // draw the projectile
         ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
@@ -135,8 +142,6 @@ class Projectile {
 class BouncyProjectile extends Projectile {
     constructor(player) {
         super(player);
-
-        console.log(this.check);
     }
 
     update(deltaTime) {
@@ -144,47 +149,36 @@ class BouncyProjectile extends Projectile {
         this.x += this.dx * deltaTime;
         this.y += this.dy * deltaTime;
 
-        // if the projectile has entered the battlefield, start checking it for deletion  
-        if (this.x < GAME_DIMENSION && this.x > 0 && this.y < GAME_DIMENSION && this.y > 0) {
+        // if the projectile has fully entered the battlefield, start checking it
+        if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
             this.check = true
         }
 
-        // // once the projectile has entered the battlefield, start checking it
-        // if (this.check) {
-        //     console.log("check");
-        //     // bounce off walls, if necessary, add 5 points if so
-        //     if (this.x < 0 || this.x > GAME_DIMENSION) {
-        //         console.log("bounce");
-        //         this.dx *= -1;
-        //         points += 5;
-        //     }
-        //     if (this.y < 0 || this.y > GAME_DIMENSION) {
-        //         this.dy *= -1;
-        //         points += 5;
-        //         console.log("bounce");
-        //     }
-        // }
-
-        // bounce off walls, if necessary, add 5 points if so
-        if (this.x < 0 || this.x > GAME_DIMENSION) {
-            this.dx *= -1;
-            points += 5;
-        }
-        if (this.y < 0 || this.y > GAME_DIMENSION) {
-            this.dy *= -1;
-            points += 5;
+        // once the projectile has entered the battlefield, start checking it
+        if (this.check) {
+            // bounce off walls, if necessary, add 5 points if so
+            if (this.x < 0 || this.x > GAME_DIMENSION - this.size) {
+                // console.log("bounce");
+                this.dx *= -1;
+                points += 5;
+            }
+            if (this.y < 0 || this.y > GAME_DIMENSION - this.size) {
+                this.dy *= -1;
+                points += 5;
+                // console.log("bounce");
+            }
         }
     }
 
     draw() {
-        // change fillstyle to pink
+        // draw the projectile as a pink square
         ctx.fillStyle = `rgb(252, 125, 255)`;
-        // draw the projectile
         ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
 async function titleScreen() {
+    // display title screen
     ctx.fillstyle = "black"
     ctx.textAlign = "center"
     
@@ -196,10 +190,12 @@ async function titleScreen() {
     ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2);
     ctx.fillText("PRESS ANY KEY TO BEGIN", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
 
+    // wait for keypress
     await waitingKeypress();
 }
 
 function waitingKeypress() {
+    // once a kjey is pressed, remove the event listener, update lastRenderTime, and start the game
     return new Promise((resolve) => {
         document.addEventListener('keydown', onKeyHandler);
 
@@ -207,6 +203,7 @@ function waitingKeypress() {
             document.removeEventListener('keydown', onKeyHandler);
             resolve();
             lastRenderTime = (Date.now() - start);
+
             window.requestAnimationFrame(main);
         }
     })
@@ -214,6 +211,7 @@ function waitingKeypress() {
 
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
 
+// retrieve the canvas and set its dimensions
 let canvas = document.querySelector("canvas");
 let ctx = canvas.getContext("2d");
 canvas.width = GAME_DIMENSION;
@@ -227,6 +225,7 @@ document.addEventListener('keydown', (e) => {
     switch(e.code)
     {
         case 'KeyW':
+            // if W is not yet in held_directions, add it. Without this, the controls are 'sticky,' player keeps moving after all buttons released.
             if (held_directions.indexOf('W') === -1) {
                 held_directions.unshift('W'); 
             }
@@ -254,7 +253,7 @@ document.addEventListener('keydown', (e) => {
             let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
             PROJECTILE_FREQUENCY = 1;
 
-            // reset projectiles and held_directions arrays
+            // empty projectiles and held_directions arrays
             projectiles = [];
             held_directions = [];
             
@@ -265,6 +264,7 @@ document.addEventListener('keydown', (e) => {
             // reset points to 0
             points = 0;
 
+            // start a new game
             window.requestAnimationFrame(main);
             break;
     }
@@ -276,6 +276,7 @@ document.addEventListener('keyup', (e) => {
 
     switch(e.code)
     {
+        // when W is released, remove it from held_directions
         case 'KeyW':
             indexToRemove = held_directions.indexOf('W');
             break;
@@ -295,6 +296,8 @@ document.addEventListener('keyup', (e) => {
     }
 });
 
+// input two numnbers, min and max
+// return random number between min and max
 function randomNumberFromRange(min, max) {
     return (Math.random() * (max - min + 1) + min);
 }
@@ -306,49 +309,45 @@ function main(currentTime) {
     // if the game isn't over, perform all necessary actions
     if (!gameOver) {
         window.requestAnimationFrame(main);
+        // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
         const deltaTime = (currentTime - lastRenderTime) / 1000;
     
-        if (Math.random() * PROJECTILE_FREQUENCY > 0.99 ) {
-            // projectiles.push(new Projectile(player));
+        // newProjectile is a variable used to determine whether a new projectile is spawned this frame
+        let newProjectile = Math.random() * PROJECTILE_FREQUENCY;
 
-            let bouncy = new BouncyProjectile(player);
-            bouncy.x = 75;
-            bouncy.y = 75;
-
-            projectiles.push(bouncy);
+        if (Math.random() * PROJECTILE_FREQUENCY > 0.9999999999 ) {
+            projectiles.push(new BouncyProjectile(player));
+        } else if (newProjectile > 0.99) {
+            projectiles.push(new Projectile(player));
         }
+
         lastRenderTime = currentTime;
     
+        // update the player
         player.update(deltaTime);
         
+        // for each projectile in the projectiles array, update it. If it is flagged for deletion, remove it from projectiles.
         for (let i = 0; i < projectiles.length; i++) {
             // update position
-            projectiles[i].update(deltaTime)
-            // delete if projectile left screen, and increment points
-            if (projectiles[i].check) {
-                if (projectiles[i].x > GAME_DIMENSION || projectiles[i].x < 0 || projectiles[i].y > GAME_DIMENSION || projectiles[i].y < 0) {
-                    projectiles.splice(i, 1);
-                    points += 1;
-                }
+            if (projectiles[i].update(deltaTime)) {
+                projectiles.splice(i, 1);
             }
         }
-    
-            // draw
-                // clear canvas
 
-                // draw character
-            player.draw();
-                // draw projectiles 
-            for (let i = 0; i < projectiles.length; i++) {
-                projectiles[i].draw();
-            }
-                // draw score
-                ctx.font = "30px Futura";
-                ctx.fillStyle = "black";
-                ctx.textAlign = "center";
-                ctx.fillText("POINTS: " + points, 875, 975);
+        // draw character
+        player.draw();
+                
+        // draw projectiles 
+        for (let i = 0; i < projectiles.length; i++) {
+            projectiles[i].draw();
+        }
+        // draw score
+        ctx.font = "30px Futura";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        ctx.fillText("POINTS: " + points, 875, 975);
     
-         // increase projectile frequency and size
+        // increase projectile frequency and size
         PROJECTILE_FREQUENCY += 0.001 * deltaTime;
         PROJECTILE_SIZE += 0.001 * deltaTime;
     } else {
