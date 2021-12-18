@@ -8,6 +8,8 @@ let PLAYER_SIZE = GAME_DIMENSION * 0.05;
 let PLAYER_VELOCITY = PLAYER_SIZE * 15;
 let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
 let PROJECTILE_FREQUENCY = 1;
+let HOMING_FREQUENCY = 1;
+let ACCELERATION = 1;
 
 // initialize list of projectiles to be empty, points to be 0
 let projectiles = [];
@@ -104,9 +106,9 @@ class Projectile {
         }
 
         // randomly assign each projectile a speed
-        let timeUntilPlayer = randomNumberFromRange(1, 2);
-        this.dx = (player.x - this.x) / timeUntilPlayer;
-        this.dy = (player.y - this.y) / timeUntilPlayer;
+        this.timeUntilPlayer = randomNumberFromRange(1, 2);
+        this.dx = (player.x - this.x) / this.timeUntilPlayer;
+        this.dy = (player.y - this.y) / this.timeUntilPlayer;
 
         // don't check for deletion at first, only start checking once projectile has entered the battlefield
         this.check = false;
@@ -125,7 +127,7 @@ class Projectile {
 
         // check if projectile has left the battlefield
         if (this.check) {
-            if (this.x > GAME_DIMENSION || this.x < 0 || this.y > GAME_DIMENSION || this.y < 0) {
+            if (this.x > GAME_DIMENSION || this.x + this.size < 0 || this.y > GAME_DIMENSION || this.y + this.size < 0) {
                 points += 1;
                 return true;
             }
@@ -158,14 +160,12 @@ class BouncyProjectile extends Projectile {
         if (this.check) {
             // bounce off walls, if necessary, add 5 points if so
             if (this.x < 0 || this.x > GAME_DIMENSION - this.size) {
-                // console.log("bounce");
                 this.dx *= -1;
                 points += 5;
             }
             if (this.y < 0 || this.y > GAME_DIMENSION - this.size) {
                 this.dy *= -1;
                 points += 5;
-                // console.log("bounce");
             }
         }
     }
@@ -207,6 +207,75 @@ function waitingKeypress() {
             window.requestAnimationFrame(main);
         }
     })
+}
+
+class HomingProjectile extends Projectile {
+    update(deltaTime) {
+        // update position
+        this.x += this.dx * deltaTime;
+        this.y += this.dy * deltaTime;
+        // check for collision?
+
+        // if the projectile has entered the battlefield, start checking it for deletion  
+        if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
+            this.check = true
+        }
+
+        // check if projectile has left the battlefield
+        if (this.check) {
+            if (this.x > GAME_DIMENSION || this.x + this.size < 0 || this.y > GAME_DIMENSION || this.y + this.size < 0) {
+                points += 10;
+                return true;
+            }
+        }
+
+        // randomly decide whether to redirect toward the player
+        if (Math.random() * HOMING_FREQUENCY > 0.99) {
+            // give new velocity and direction
+            this.timeUntilPlayer = randomNumberFromRange(1, 2);
+            this.dx = (player.x - this.x) / this.timeUntilPlayer;
+            this.dy = (player.y - this.y) / this.timeUntilPlayer;
+        }
+    }
+
+    draw() {
+        // draw the projectile as a purple square
+        ctx.fillStyle = "purple";
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+
+class AcceleratingProjectile extends Projectile {
+    update(deltaTime) {
+        // update position
+        this.x += this.dx * deltaTime;
+        this.y += this.dy * deltaTime;
+        // check for collision?
+
+        // if the projectile has entered the battlefield, start checking it for deletion  
+        if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
+            this.check = true
+        }
+
+        // check if projectile has left the battlefield
+        if (this.check) {
+            if (this.x > GAME_DIMENSION || this.x + this.size < 0 || this.y > GAME_DIMENSION || this.y + this.size < 0) {
+                points += 3;
+                return true;
+            }
+        }
+
+        // console.log('before: ' + this.dx);
+        this.dx += (ACCELERATION * this.dx * deltaTime); 
+        this.dy += (ACCELERATION * this.dy * deltaTime);
+        // console.log('after: ' + this.dx + '\n');
+    }
+
+    draw() {
+        // draw the projectile as a red square
+        ctx.fillStyle = "orange";
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
 }
 
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
@@ -315,10 +384,11 @@ function main(currentTime) {
         // newProjectile is a variable used to determine whether a new projectile is spawned this frame
         let newProjectile = Math.random() * PROJECTILE_FREQUENCY;
 
-        if (Math.random() * PROJECTILE_FREQUENCY > 0.9999999999 ) {
-            projectiles.push(new BouncyProjectile(player));
-        } else if (newProjectile > 0.99) {
-            projectiles.push(new Projectile(player));
+        if (newProjectile > 0.99) {
+            // projectiles.push(new Projectile(player));
+            // projectiles.push(new BouncyProjectile(player));
+            // projectiles.push(new HomingProjectile(player));
+            projectiles.push(new AcceleratingProjectile(player));
         }
 
         lastRenderTime = currentTime;
