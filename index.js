@@ -345,8 +345,16 @@ function waitingKeypress() {
 
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
 
+let numProj = 0;
+
 function main(currentTime) { // main function containing game loop
     ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
+
+    let maxProj = 3;
+    if (numProj < maxProj) {
+        projectiles.push(new Projectile(player));
+        numProj++;
+    }
 
     if (!gameOver) {    // if the game isn't over, perform all necessary actions
         window.requestAnimationFrame(main);
@@ -357,10 +365,10 @@ function main(currentTime) { // main function containing game loop
 
         if (newProjectile > 0.99) {
             projectiles.push(new Projectile(player));
-            projectiles.push(new BouncyProjectile(player));
-            projectiles.push(new HomingProjectile(player));
-            projectiles.push(new AcceleratingProjectile(player));
-            projectiles.push(new GrowingProjectile(player));
+            // projectiles.push(new BouncyProjectile(player));
+            // projectiles.push(new HomingProjectile(player));
+            // projectiles.push(new AcceleratingProjectile(player));
+            // projectiles.push(new GrowingProjectile(player));
         }
 
         lastRenderTime = currentTime;
@@ -369,9 +377,10 @@ function main(currentTime) { // main function containing game loop
         
         // for each projectile in the projectiles array 
         for (let i = 0; i < projectiles.length; i++) {
-            projectiles[i].action(deltaTime); // perform necessary actions
+            projectiles[i].update(deltaTime);
 
-            if (projectiles[i].update(deltaTime)) { // update the projectile's positions, check if it left the battlefield
+
+            if (projectiles[i].action(deltaTime)) { // perform necessary actions, check if left battlefield
                 projectiles.splice(i, 1); // if so, remove the projectile
             }
         }
