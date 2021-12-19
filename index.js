@@ -14,9 +14,10 @@ let start = Date.now(); // used to store clock time when page loaded, to normali
 
 // declare balance constants
 let PROJECTILE_FREQUENCY = 1; // base projectile frequency
-let HOMING_FREQUENCY = 1; // base homing frequency
-let ACCELERATION = 1; // base acceleration rate
+let HOMING_FREQUENCY = 1; // base homing frequency of HomingProjectiles
+let ACCELERATION = 1; // base acceleration rate of AcceleratingProjectiles
 let GROW_SPEED = 30; // base speed of growth for GrowingProjectiles
+let GRAVITY = 10; // base gravitational pull of GravityProjectiles
 
 
 
@@ -201,15 +202,14 @@ class Projectile {
     }
 
     action() { // perform all necessary actions, such as removing the projectile if it leaves the battlefield
-        if (this.x < GAME_DIMENSION - this.size && this.x > 0   // if the projectile has entered the battlefield, start checking it for deletion  
-            && this.y < GAME_DIMENSION - this.size && this.y > 0) {
-            this.check = true
+        if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
+            this.check = true;
         }
 
-        if (this.check) { // check if projectile has left the battlefield, if so delete it and add correct number of points
+        if (this.check) {
             if (this.x > GAME_DIMENSION || this.x + this.size < 0 || this.y > GAME_DIMENSION || this.y + this.size < 0) {
-                points += this.points; // add point(s)
-                return true; // to indicate the projecitle has left the battlefield, used to remove elements from projectiles[] as appropriate
+                points += this.points;
+                return true;
             }
         }
     }
@@ -258,13 +258,14 @@ class HomingProjectile extends Projectile { // this projectile derives from Proj
     }
     
     action() {
-        super.action(); // perform all the same actions as base action function
+        if (super.action()) return true; // perform all the same actions as base action function
         
         if (Math.random() * HOMING_FREQUENCY > 0.99) {        // randomly decide whether to redirect toward the player
             this.timeUntilPlayer = randomNumberFromRange(1, 2); // assign new speed
             this.dx = (player.x - this.x) / this.timeUntilPlayer; // assign new velocity in x dimension
             this.dy = (player.y - this.y) / this.timeUntilPlayer; // assign new velocity in y dimension
         }
+        // return false;
     }
 
     draw() { // used to draw the projectile to the canvas
@@ -281,7 +282,7 @@ class AcceleratingProjectile extends Projectile { // this class derives from Pro
     }
 
     action(deltaTime) {
-        super.action(); // perform all the same actions as the parent class action() function
+        if (super.action()) return true; // perform all the same actions as the parent class action() function
 
         // accelerate the projectile
         this.dx += (ACCELERATION * this.dx * deltaTime); // accelerate in x dimension
@@ -301,7 +302,7 @@ class GrowingProjectile extends Projectile { // this class derives from base Pro
     }
 
     action(deltaTime) {
-        super.action(); // perform all the same actions as the base class action() function 
+        if (super.action()) return true; // perform all the same actions as the base class action() function 
 
         this.size += GROW_SPEED * deltaTime; // grow the projectile
     }
@@ -309,6 +310,36 @@ class GrowingProjectile extends Projectile { // this class derives from base Pro
     draw() {
         ctx.fillStyle = `rgb(0, 142, 5)`; // change fill style to green
         ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a green square
+    }
+}
+
+class GravityProjectile extends Projectile { // this class derives from base Projectile, and draws the player closer to it
+    constructor(player) {
+        super(player); // perform all the same actions as base class constructor
+        this.points = 50; // update this.points to be 5
+    }
+
+    action(deltaTime) {
+        if (super.action()) return true; // perform all the same actions as the base class action() function 
+
+        // let distance = Math.sqrt( Math.pow(player.x - this.x, 2) + Math.pow(player.y - this.y, 2));
+
+        // console.log(GRAVITY * deltaTime / distance);
+
+        // player.x += GRAVITY * deltaTime / distance;
+        // player.y += GRAVITY * deltaTime / distance;
+
+        let xDistance = player.x - this.x;
+        let yDistance = player.y - this.y;
+
+        player.x -= this.size * xDistance * GRAVITY * deltaTime / Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2));
+        player.y -= this.size * yDistance * GRAVITY * deltaTime / Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2));
+
+    }
+
+    draw() {
+        ctx.fillStyle = `rgb(77, 0, 255)`; // change fill style to blue
+        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a blue square
     }
 }
 
@@ -345,16 +376,8 @@ function waitingKeypress() {
 
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
 
-let numProj = 0;
-
 function main(currentTime) { // main function containing game loop
     ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
-
-    let maxProj = 3;
-    if (numProj < maxProj) {
-        projectiles.push(new Projectile(player));
-        numProj++;
-    }
 
     if (!gameOver) {    // if the game isn't over, perform all necessary actions
         window.requestAnimationFrame(main);
@@ -364,11 +387,12 @@ function main(currentTime) { // main function containing game loop
         let newProjectile = Math.random() * PROJECTILE_FREQUENCY; // newProjectile is a variable used to determine whether a new projectile is spawned this frame
 
         if (newProjectile > 0.99) {
-            projectiles.push(new Projectile(player));
+            // projectiles.push(new Projectile(player));
             // projectiles.push(new BouncyProjectile(player));
             // projectiles.push(new HomingProjectile(player));
             // projectiles.push(new AcceleratingProjectile(player));
             // projectiles.push(new GrowingProjectile(player));
+            projectiles.push(new GravityProjectile(player));
         }
 
         lastRenderTime = currentTime;
@@ -379,9 +403,9 @@ function main(currentTime) { // main function containing game loop
         for (let i = 0; i < projectiles.length; i++) {
             projectiles[i].update(deltaTime);
 
-
-            if (projectiles[i].action(deltaTime)) { // perform necessary actions, check if left battlefield
-                projectiles.splice(i, 1); // if so, remove the projectile
+            if (projectiles[i].action(deltaTime)) {
+                console.log('splice');
+                projectiles.splice(i, 1);
             }
         }
 
