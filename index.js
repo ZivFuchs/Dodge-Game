@@ -1,19 +1,18 @@
-// potential changes: sound (background music, each projectile makes noise, death noise, bounce noise)
-
 const framesPerSecond = 60;
 
-// declare constants
+// declare dimensional constants
 let GAME_DIMENSION = 1000;
 let PLAYER_SIZE = GAME_DIMENSION * 0.05;
 let PLAYER_VELOCITY = PLAYER_SIZE * 15;
 let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
+
+// declare balance constants
 let PROJECTILE_FREQUENCY = 1;
 let HOMING_FREQUENCY = 1;
 let ACCELERATION = 1;
-let GROW_SPEED = 10;
+let GROW_SPEED = 30;
 
-// initialize list of projectiles to be empty, points to be 0
-let projectiles = [];
+let projectiles = []; // array holding the projectiles, starts empty
 let points = 0;
 
 // initailze lastRenderTime, gameOver, and start, lastRenderTime will be overwritten with current time when game starts
@@ -79,47 +78,39 @@ class Player {
 
 class Projectile {
     constructor(player) {
-        // randomly assign each projectile a size
-        this.size = PROJECTILE_SIZE * randomNumberFromRange(0.5, 1.5);
+        this.size = PROJECTILE_SIZE * randomNumberFromRange(0.5, 1.5); // randomly assign each projectile a size
 
         // randomly place each projectile outside of the game screen
         switch(Math.floor(randomNumberFromRange(0,3))) {
-            // above battlefield
-            case 0:
+            case 0: // above battlefield
                 this.x = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
                 this.y = -2 * this.size;
                 break;
-            // right of battlefield
-            case 1:
+            case 1: // right of battlefield
                 this.x = GAME_DIMENSION + (2 * this.size);
                 this.y = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
                 break;
-            // below battlefield
-            case 2:
+            case 2: // below battlefield
                 this.x = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
                 this.y = GAME_DIMENSION + (2 * this.size);
                 break;
-            // left of battlefield
-            case 3:
+            case 3: // left of battlefield
                 this.x = -2 * this.size;
                 this.y = (Math.random() * (GAME_DIMENSION + (2 * this.size))) - this.size;
                 break;
         }
 
-        // randomly assign each projectile a speed
+        // randomly assign each projectile a velocity
         this.timeUntilPlayer = randomNumberFromRange(1, 2);
         this.dx = (player.x - this.x) / this.timeUntilPlayer;
         this.dy = (player.y - this.y) / this.timeUntilPlayer;
 
-        // don't check for deletion at first, only start checking once projectile has entered the battlefield
-        this.check = false;
+        this.check = false; // don't check for deletion at first, only start checking once projectile has entered the battlefield
     }
 
     update(deltaTime) {
-        // update position
-        this.x += this.dx * deltaTime;
-        this.y += this.dy * deltaTime;
-        // check for collision?
+        this.x += this.dx * deltaTime; // update x coordinate
+        this.y += this.dy * deltaTime; // update y coordinate
 
         // if the projectile has entered the battlefield, start checking it for deletion  
         if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
@@ -149,8 +140,8 @@ class BouncyProjectile extends Projectile {
 
     update(deltaTime) {
         // update position
-        this.x += this.dx * deltaTime;
-        this.y += this.dy * deltaTime;
+        this.x += this.dx * deltaTime; // update x coordinate
+        this.y += this.dy * deltaTime; // update y coordinate
 
         // if the projectile has fully entered the battlefield, start checking it
         if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
@@ -191,8 +182,7 @@ async function titleScreen() {
     ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2);
     ctx.fillText("PRESS ANY KEY TO BEGIN", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
 
-    // wait for keypress
-    await waitingKeypress();
+    await waitingKeypress(); // wait for key press
 }
 
 function waitingKeypress() {
@@ -212,10 +202,8 @@ function waitingKeypress() {
 
 class HomingProjectile extends Projectile {
     update(deltaTime) {
-        // update position
-        this.x += this.dx * deltaTime;
-        this.y += this.dy * deltaTime;
-        // check for collision?
+        this.x += this.dx * deltaTime; // update x coordinate
+        this.y += this.dy * deltaTime; // update y coordinate
 
         // if the projectile has entered the battlefield, start checking it for deletion  
         if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
@@ -232,7 +220,7 @@ class HomingProjectile extends Projectile {
 
         // randomly decide whether to redirect toward the player
         if (Math.random() * HOMING_FREQUENCY > 0.99) {
-            // give new velocity and direction
+            // assign new velocity
             this.timeUntilPlayer = randomNumberFromRange(1, 2);
             this.dx = (player.x - this.x) / this.timeUntilPlayer;
             this.dy = (player.y - this.y) / this.timeUntilPlayer;
@@ -248,10 +236,8 @@ class HomingProjectile extends Projectile {
 
 class AcceleratingProjectile extends Projectile {
     update(deltaTime) {
-        // update position
-        this.x += this.dx * deltaTime;
-        this.y += this.dy * deltaTime;
-        // check for collision?
+        this.x += this.dx * deltaTime; // update x coordinate
+        this.y += this.dy * deltaTime; // update y coordinate
 
         // if the projectile has entered the battlefield, start checking it for deletion  
         if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
@@ -266,14 +252,13 @@ class AcceleratingProjectile extends Projectile {
             }
         }
 
-        // console.log('before: ' + this.dx);
+        // accelerate the projectile
         this.dx += (ACCELERATION * this.dx * deltaTime); 
         this.dy += (ACCELERATION * this.dy * deltaTime);
-        // console.log('after: ' + this.dx + '\n');
     }
 
     draw() {
-        // draw the projectile as a red square
+        // draw the projectile as an orange square
         ctx.fillStyle = "orange";
         ctx.fillRect(this.x, this.y, this.size, this.size);
     }
@@ -281,10 +266,8 @@ class AcceleratingProjectile extends Projectile {
 
 class GrowingProjectile extends Projectile {
     update(deltaTime) {
-        // update position
-        this.x += this.dx * deltaTime;
-        this.y += this.dy * deltaTime;
-        // check for collision?
+        this.x += this.dx * deltaTime; // update x coordinate
+        this.y += this.dy * deltaTime; // update y coordinate
 
         // if the projectile has entered the battlefield, start checking it for deletion  
         if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
@@ -299,7 +282,7 @@ class GrowingProjectile extends Projectile {
             }
         }
 
-        this.size += GROW_SPEED * deltaTime;
+        this.size += GROW_SPEED * deltaTime; // grow the projectile
     }
 
     draw() {
@@ -317,8 +300,7 @@ let ctx = canvas.getContext("2d");
 canvas.width = GAME_DIMENSION;
 canvas.height = GAME_DIMENSION;
 
-// this array is used to manage which direction the player is moving
-let held_directions = [];
+let held_directions = []; // this array is used to manage which direction the player is moving
 
 // this keydown event listener is used to control the player, and reset the game
 document.addEventListener('keydown', (e) => {
@@ -349,9 +331,8 @@ document.addEventListener('keydown', (e) => {
             // if the user hits enter, restart the game
             gameOver = false;
 
-            // reset projectile size and frequency
-            let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
-            PROJECTILE_FREQUENCY = 1;
+            let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;    // reset projectile size
+            PROJECTILE_FREQUENCY = 1;                   // reset projectile frequency
 
             // empty projectiles and held_directions arrays
             projectiles = [];
