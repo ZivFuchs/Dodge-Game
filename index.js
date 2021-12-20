@@ -12,6 +12,8 @@ let gameOver = false;
 let lastRenderTime = 0; // used for the game loop to implement frame independence
 let start = Date.now(); // used to store clock time when page loaded, to normalize first deltaTime
 let gameState = "title"; // gamestate can be title, game, pause, or over
+let PauseStart = 0;
+let deltaTime = 0;
 
 // declare balance constants
 let PROJECTILE_FREQUENCY = 1; // base projectile frequency
@@ -54,22 +56,42 @@ document.addEventListener('keydown', (e) => {
                 held_directions.unshift('D');
             }
             break;
-        case 'Enter':
-            gameOver = false; // if the user hits enter, restart the game
+        case 'Space':
 
-            let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;    // reset projectile size
-            PROJECTILE_FREQUENCY = 1;                   // reset projectile frequency
+            switch(gameState) {
+                case 'title':
+                    gameState = 'game';
+                    window.requestAnimationFrame(main);
+                    break;
+                case 'game':
+                    gameState = 'pause';
+                    PauseStart = Date.now();
+                    break;
+                case 'pause':
+                    gameState = 'game';
+                    lastRenderTime += Date.now() - PauseStart;
+                    window.requestAnimationFrame(main);
+                    break;
+                case 'over':
+                    gameState = 'game';
 
-            projectiles = []; // empty projectiles array
-            held_directions = []; // empty directions array
-            
-            // recenter the player
-            player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
-            player.y = player.x;
+                    let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;    // reset projectile size
+                    PROJECTILE_FREQUENCY = 1;                   // reset projectile frequency
 
-            points = 0; // reset points to 0
+                    // empty projectiles and held_directions arrays
+                    projectiles = [];
+                    held_directions = [];
 
-            window.requestAnimationFrame(main); // start a new game
+                    // recenter the player
+                    player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
+                    player.y = player.x;
+                    // reset points to 0
+                    points = 0;
+
+                    window.requestAnimationFrame(main);
+                    break;
+            }
+
             break;
     }
 });
@@ -149,7 +171,7 @@ class Player {
         for (let i = 0; i < projectiles.length; i++) {
             if ((projectiles[i].x + projectiles[i].size >= player.x && projectiles[i].x <= player.x + PLAYER_SIZE) && 
                 (projectiles[i].y + projectiles[i].size >= player.y && projectiles[i].y <= player.y + PLAYER_SIZE)) { // if projectile intersects player
-                gameOver = true; // the game is over
+                gameState = 'over'; // the game is over
             }
         }
     }
@@ -377,108 +399,86 @@ class SplittingProjectile extends Projectile { // this class derives from base P
     }
 }
 
-async function titleScreen() {
-    // display title screen
-    ctx.fillstyle = "black" // change fill style to black
-    ctx.textAlign = "center" // align text to the center
-    
-    ctx.font = "60px Futura" // change font to 60px Futura
-    ctx.fillText("DODGE GAME", GAME_DIMENSION/2, 100); // print "DODGE GAME" centered in x, 100 in y
-
-    ctx.font = "30px Futura" // change font to 30px Futura
-    ctx.fillText("AVOID THE PROJECTILES AS LONG AS POSSIBLE", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50); // print message 50 above center of canvas
-    ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2); // print message to center of canvas
-    ctx.fillText("PRESS ANY KEY TO BEGIN", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50); // print message 50 below center of canvas
-
-    await waitingKeypress(); // wait for key press
-}
-
-function waitingKeypress() {
-    // once a key is pressed, remove the event listener, update lastRenderTime, and start the game
-    return new Promise((resolve) => {
-        document.addEventListener('keydown', onKeyHandler);
-
-        function onKeyHandler(e) {
-            document.removeEventListener('keydown', onKeyHandler);
-            resolve();
-            lastRenderTime = (Date.now() - start);
-
-            window.requestAnimationFrame(main);
-        }
-    })
-}
-
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
 
 function main(currentTime) { // main function containing game loop
-    ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
-
     switch (gameState) {
         case "title":
+            ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
+            // display title screen
+            ctx.fillstyle = "black" // change fill style to black
+            ctx.textAlign = "center" // align text to the center
+            
+            ctx.font = "60px Futura" // change font to 60px Futura
+            ctx.fillText("DODGE GAME", GAME_DIMENSION/2, 100); // print "DODGE GAME" centered in x, 100 in y
+
+            ctx.font = "30px Futura" // change font to 30px Futura
+            ctx.fillText("AVOID THE PROJECTILES AS LONG AS POSSIBLE", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50); // print message 50 above center of canvas
+            ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2); // print message to center of canvas
+            ctx.fillText("PRESS SPACEBAR TO BEGIN AND PAUSE", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50); // print message 50 below center of canvas
             break;
-        case "game":
-            break;
-        case "pause":
-            break;
-        case "over":
-            break;
-    }
+        case "game": // if the game is playing, perform all necessary actions
+                ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
+                deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
 
+                let newProjectile = Math.random() * PROJECTILE_FREQUENCY; // newProjectile is a variable used to determine whether a new projectile is spawned this frame
 
-    if (!gameOver) {    // if the game isn't over, perform all necessary actions
-        window.requestAnimationFrame(main);
+                if (newProjectile > 0.99) {
+                    projectiles.push(new Projectile(player));
+                    // projectiles.push(new BouncyProjectile(player));
+                    // projectiles.push(new HomingProjectile(player));
+                    // projectiles.push(new AcceleratingProjectile(player));
+                    // projectiles.push(new GrowingProjectile(player));
+                    // projectiles.push(new GravityProjectile(player));
+                    // projectiles.push(new SplittingProjectile(player));
+                }
 
-        const deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
-    
-        let newProjectile = Math.random() * PROJECTILE_FREQUENCY; // newProjectile is a variable used to determine whether a new projectile is spawned this frame
-
-        if (newProjectile > 0.99) {
-            // projectiles.push(new Projectile(player));
-            // projectiles.push(new BouncyProjectile(player));
-            // projectiles.push(new HomingProjectile(player));
-            // projectiles.push(new AcceleratingProjectile(player));
-            // projectiles.push(new GrowingProjectile(player));
-            // projectiles.push(new GravityProjectile(player));
-            projectiles.push(new SplittingProjectile(player));
-        }
-
-        lastRenderTime = currentTime;
-    
-        player.update(deltaTime); // update the player
-        
-        // for each projectile in the projectiles array 
-        for (let i = 0; i < projectiles.length; i++) {
-            projectiles[i].update(deltaTime);
-
-            if (projectiles[i].action(deltaTime)) {
-                console.log('splice');
-                projectiles.splice(i, 1);
-            }
-        }
-
-        player.draw(); // draw character
+                lastRenderTime = currentTime;
+            
+                player.update(deltaTime); // update the player
                 
-        for (let i = 0; i < projectiles.length; i++) { // for each projectile
-            projectiles[i].draw(); // draw the projectile
-        }
+                // for each projectile in the projectiles array 
+                for (let i = 0; i < projectiles.length; i++) {
+                    projectiles[i].update(deltaTime);
 
-        ctx.font = "30px Futura"; // change font to 30px Futura
-        ctx.fillStyle = "black"; // change fill style to black
-        ctx.textAlign = "center"; // change text alignment to center
-        ctx.fillText("POINTS: " + points, 875, 975); // display points in bottom right corner
-    
-        PROJECTILE_FREQUENCY += 0.001 * deltaTime; // increase projectile frequency
-        PROJECTILE_SIZE += 0.001 * deltaTime; // increase projectile size
-    } else { // if the game is over, display gameover screen
-        
-        // display gameover message in 30 point Futura black to the center of the screen
-        ctx.font = "30px Futura"; // change font to 30px Futura
-        ctx.fillStyle = "black"; // change fill style to black
-        ctx.textAlign = "center"; // change text alignment to center
-        ctx.fillText("GAME OVER", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50); // print "GAME OVER" 50 above center of canvas
-        ctx.fillText("POINTS: " + points, GAME_DIMENSION/2, GAME_DIMENSION/2); // display points in center of canvas
-        ctx.fillText("TO START OVER, PRESS ENTER", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50); // display message 50 below center of canvas
+                    if (projectiles[i].action(deltaTime)) {
+                        projectiles.splice(i, 1);
+                    }
+                }
+
+                player.draw(); // draw character
+                        
+                for (let i = 0; i < projectiles.length; i++) { // for each projectile
+                    projectiles[i].draw(); // draw the projectile
+                }
+
+                ctx.font = "30px Futura"; // change font to 30px Futura
+                ctx.fillStyle = "black"; // change fill style to black
+                ctx.textAlign = "center"; // change text alignment to center
+                ctx.fillText("POINTS: " + points, 875, 975); // display points in bottom right corner
+            
+                PROJECTILE_FREQUENCY += 0.001 * deltaTime; // increase projectile frequency
+                PROJECTILE_SIZE += 0.001 * deltaTime; // increase projectile size
+
+
+                window.requestAnimationFrame(main); 
+            break;
+        case "pause": // if the game is paused, do nothing but display pause message
+                ctx.font = "30px Futura"
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.fillText("PAUSED, SPACEBAR TO RESUME", GAME_DIMENSION/2, GAME_DIMENSION/2);
+            break;
+        case "over": // if the game is over, display gameover screen
+            // display gameover message in 30 point Futura black to the center of the screen
+            ctx.font = "30px Futura"; // change font to 30px Futura
+            ctx.fillStyle = "black"; // change fill style to black
+            ctx.textAlign = "center"; // change text alignment to center
+            ctx.fillText("GAME OVER", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50); // print "GAME OVER" 50 above center of canvas
+            ctx.fillText("POINTS: " + points, GAME_DIMENSION/2, GAME_DIMENSION/2); // display points in center of canvas
+            ctx.fillText("TO START OVER, PRESS SPACEBAR", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50); // display message 50 below center of canvas
+            break;       
     }
 }
 
-titleScreen(); // call titlescreen function, displaying title screen and entering the game loop once a key is pressed
+window.requestAnimationFrame(main);
