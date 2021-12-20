@@ -11,15 +11,15 @@ let points = 0;
 let gameOver = false;
 let lastRenderTime = 0; // used for the game loop to implement frame independence
 let start = Date.now(); // used to store clock time when page loaded, to normalize first deltaTime
+let gameState = "title"; // gamestate can be title, game, pause, or over
 
 // declare balance constants
 let PROJECTILE_FREQUENCY = 1; // base projectile frequency
-let HOMING_FREQUENCY = 1; // base homing frequency of HomingProjectiles
+let HOMING_STRENGTH = 1; // base homing frequency of HomingProjectiles
 let ACCELERATION = 1; // base acceleration rate of AcceleratingProjectiles
 let GROW_SPEED = 30; // base speed of growth for GrowingProjectiles
-let GRAVITY = 10; // base gravitational pull of GravityProjectiles
-
-
+let GRAVITY = 1000; // base gravitational pull of GravityProjectiles
+let SPLIT_CHANCE = 1;
 
 // retrieve the canvas and set its dimensions
 let canvas = document.querySelector("canvas");
@@ -55,25 +55,21 @@ document.addEventListener('keydown', (e) => {
             }
             break;
         case 'Enter':
-            // if the user hits enter, restart the game
-            gameOver = false;
+            gameOver = false; // if the user hits enter, restart the game
 
             let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;    // reset projectile size
             PROJECTILE_FREQUENCY = 1;                   // reset projectile frequency
 
-            // empty projectiles and held_directions arrays
-            projectiles = [];
-            held_directions = [];
+            projectiles = []; // empty projectiles array
+            held_directions = []; // empty directions array
             
             // recenter the player
             player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
             player.y = player.x;
 
-            // reset points to 0
-            points = 0;
+            points = 0; // reset points to 0
 
-            // start a new game
-            window.requestAnimationFrame(main);
+            window.requestAnimationFrame(main); // start a new game
             break;
     }
 });
@@ -257,15 +253,14 @@ class HomingProjectile extends Projectile { // this projectile derives from Proj
         this.points = 5; // update points to be 5
     }
     
-    action() {
+    action(deltaTime) {
         if (super.action()) return true; // perform all the same actions as base action function
         
-        if (Math.random() * HOMING_FREQUENCY > 0.99) {        // randomly decide whether to redirect toward the player
+        if (Math.random() * HOMING_STRENGTH > 0.99) {        // randomly decide whether to redirect toward the player
             this.timeUntilPlayer = randomNumberFromRange(1, 2); // assign new speed
             this.dx = (player.x - this.x) / this.timeUntilPlayer; // assign new velocity in x dimension
             this.dy = (player.y - this.y) / this.timeUntilPlayer; // assign new velocity in y dimension
         }
-        // return false;
     }
 
     draw() { // used to draw the projectile to the canvas
@@ -322,24 +317,63 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
     action(deltaTime) {
         if (super.action()) return true; // perform all the same actions as the base class action() function 
 
-        // let distance = Math.sqrt( Math.pow(player.x - this.x, 2) + Math.pow(player.y - this.y, 2));
-
-        // console.log(GRAVITY * deltaTime / distance);
-
-        // player.x += GRAVITY * deltaTime / distance;
-        // player.y += GRAVITY * deltaTime / distance;
-
         let xDistance = player.x - this.x;
         let yDistance = player.y - this.y;
+        let Distance = Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2));
 
-        player.x -= this.size * xDistance * GRAVITY * deltaTime / Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2));
-        player.y -= this.size * yDistance * GRAVITY * deltaTime / Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2));
+        if (xDistance < 0) {
+            player.x += this.size * GRAVITY * deltaTime / Distance;
+        } else {
+            player.x -= this.size * GRAVITY * deltaTime / Distance;
+        }
 
+        if (yDistance < 0) {
+            player.y += this.size * GRAVITY * deltaTime / Distance;
+        } else {
+            player.y -= this.size * GRAVITY * deltaTime / Distance;
+        }
     }
 
     draw() {
         ctx.fillStyle = `rgb(77, 0, 255)`; // change fill style to blue
         ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a blue square
+    }
+}
+
+class SplittingProjectile extends Projectile { // this class derives from base Projectile, and splits into multiple projectiles
+    constructor(player) {
+        super(player); // perform all the same actions as base class constructor
+        this.points = 1; // update this.points to be 5
+    }
+
+    action(deltaTime) {
+        if (super.action()) return true; // perform all the same actions as the base class action() function 
+
+        if (Math.random() * SPLIT_CHANCE > 0.99) {
+            let xDistance = player.x - this.x;
+            let yDistance = player.y - this.y;
+
+            let split1 = new SplittingProjectile(player);
+            split1 = this;
+            let split2 = new SplittingProjectile(player);
+            split2 = this;
+
+            split1.x = this.x + 10;
+            split1.y = this.y + 10;
+
+            split2.x = this.x - 10;
+            split2.y = this - 10;
+
+            projectiles.push(split1);
+            projectiles.push(split2);
+
+            return true;
+        }
+    }
+
+    draw() {
+        ctx.fillStyle = `rgb(255, 230, 0)`; // change fill style to yellow
+        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a yellow square
     }
 }
 
@@ -360,7 +394,7 @@ async function titleScreen() {
 }
 
 function waitingKeypress() {
-    // once a kjy is pressed, remove the event listener, update lastRenderTime, and start the game
+    // once a key is pressed, remove the event listener, update lastRenderTime, and start the game
     return new Promise((resolve) => {
         document.addEventListener('keydown', onKeyHandler);
 
@@ -379,6 +413,18 @@ let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_VELOCITY);
 function main(currentTime) { // main function containing game loop
     ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
 
+    switch (gameState) {
+        case "title":
+            break;
+        case "game":
+            break;
+        case "pause":
+            break;
+        case "over":
+            break;
+    }
+
+
     if (!gameOver) {    // if the game isn't over, perform all necessary actions
         window.requestAnimationFrame(main);
 
@@ -392,7 +438,8 @@ function main(currentTime) { // main function containing game loop
             // projectiles.push(new HomingProjectile(player));
             // projectiles.push(new AcceleratingProjectile(player));
             // projectiles.push(new GrowingProjectile(player));
-            projectiles.push(new GravityProjectile(player));
+            // projectiles.push(new GravityProjectile(player));
+            projectiles.push(new SplittingProjectile(player));
         }
 
         lastRenderTime = currentTime;
