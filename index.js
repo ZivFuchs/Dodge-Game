@@ -1,19 +1,16 @@
-const framesPerSecond = 60;
-
 // declare dimensional constants
 let GAME_DIMENSION = 1000; // side length of the battlefield
-let PLAYER_SIZE = GAME_DIMENSION * 0.05;
-let PLAYER_VELOCITY = PLAYER_SIZE * 15;
+let PLAYER_SIZE = GAME_DIMENSION * 0.05; // the player defaults to 5% the size of the battlefield
+let PLAYER_VELOCITY = PLAYER_SIZE * 15; // the player velocity is relative to its size
 let PROJECTILE_SIZE = PLAYER_SIZE * 0.3; // base projectile size
 
+// declare game variables
 let projectiles = []; // array holding the projectiles, starts empty
 let points = 0;
-let gameOver = false;
-let lastRenderTime = 0; // used for the game loop to implement frame independence
-let start = Date.now(); // used to store clock time when page loaded, to normalize first deltaTime
+let lastRenderTime = 0; // used in the game loop to implement frame independence
 let gameState = "title"; // gamestate can be title, game, pause, or over
-let PauseStart = 0;
-let deltaTime = 0;
+let PauseStart = 0; // used when pausing/unpausing to ensure game resumes where it left off
+let held_directions = []; // this array is used to manage which direction the player is moving
 
 // declare balance constants
 let PROJECTILE_FREQUENCY = 1; // base projectile frequency
@@ -21,62 +18,59 @@ let HOMING_STRENGTH = 1; // base homing frequency of HomingProjectiles
 let ACCELERATION = 1; // base acceleration rate of AcceleratingProjectiles
 let GROW_SPEED = 30; // base speed of growth for GrowingProjectiles
 let GRAVITY = 1000; // base gravitational pull of GravityProjectiles
-let SPLIT_CHANCE = 1;
+let SPLIT_CHANCE = 1; // base split chance of SplittingProjectiles
 
-// retrieve the canvas and set its dimensions
+// retrieve the canvas and its context, set canvas dimensions
 let canvas = document.querySelector("canvas");
 let ctx = canvas.getContext("2d");
 canvas.width = GAME_DIMENSION;
 canvas.height = GAME_DIMENSION;
 
-let held_directions = []; // this array is used to manage which direction the player is moving
-
-// this keydown event listener is used to control the player, and reset the game
-document.addEventListener('keydown', (e) => {
-    switch(e.code)
+// eventListener for controlling the player, pausing/unpausing/restarting game
+document.addEventListener('keydown', (e) => { // add eventListener waiting for keydown
+    switch(e.code) // once a key is pressed
     {
-        case 'KeyW':
-            // if W is not yet in held_directions, add it. Without this, the controls are 'sticky,' player keeps moving after all buttons released.
-            if (held_directions.indexOf('W') === -1) {
-                held_directions.unshift('W'); 
+        case 'KeyW': // if the code of the key pressed is W
+            if (held_directions.indexOf('W') === -1) { // if W is not yet in held_directions, add it. Without this clause, the controls are 'sticky,' player keeps moving after all buttons released.
+                held_directions.unshift('W'); // add 'W' to beginning of held_directions
             }
             break;
         case 'KeyA':
-            if (held_directions.indexOf('A') === -1) {
+            if (held_directions.indexOf('A') === -1) { // ditto for A
                 held_directions.unshift('A');
             }
             break;
         case 'KeyS':
-            if (held_directions.indexOf('S') === -1) {
+            if (held_directions.indexOf('S') === -1) { // ditto for S
                 held_directions.unshift('S');
             }
             break;
         case 'KeyD':
-            if (held_directions.indexOf('D') === -1) {
+            if (held_directions.indexOf('D') === -1) { // ditto for D
                 held_directions.unshift('D');
             }
             break;
-        case 'Space':
-
+        case 'Space': // if space is the key pressed
             switch(gameState) {
-                case 'title':
+                case 'title': // if currently on title screen, switch to game
                     gameState = 'game';
-                    window.requestAnimationFrame(main);
+                    window.requestAnimationFrame(main); // resume game
                     break;
-                case 'game':
+                case 'game': // if currently on game, switch to paused
                     gameState = 'pause';
                     PauseStart = Date.now();
                     break;
-                case 'pause':
+                case 'pause': // if currently paused, resume game
                     gameState = 'game';
-                    lastRenderTime += Date.now() - PauseStart;
-                    window.requestAnimationFrame(main);
+                    lastRenderTime += Date.now() - PauseStart; // update lastRenderTime to ensure game resumes where it left off
+                    window.requestAnimationFrame(main); // resume game
                     break;
-                case 'over':
+                case 'over': // if currently over, restart game
                     gameState = 'game';
 
-                    let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;    // reset projectile size
-                    PROJECTILE_FREQUENCY = 1;                   // reset projectile frequency
+                    // reset projectile size and frequency
+                    let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
+                    PROJECTILE_FREQUENCY = 1;
 
                     // empty projectiles and held_directions arrays
                     projectiles = [];
@@ -85,10 +79,10 @@ document.addEventListener('keydown', (e) => {
                     // recenter the player
                     player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
                     player.y = player.x;
-                    // reset points to 0
-                    points = 0;
 
-                    window.requestAnimationFrame(main);
+                    points = 0; // reset points
+
+                    window.requestAnimationFrame(main); // resume game
                     break;
             }
 
@@ -96,23 +90,22 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-document.addEventListener('keyup', (e) => {
+document.addEventListener('keyup', (e) => { // when a key is released
 
     let indexToRemove = -1;
 
     switch(e.code)
     {
-        // when W is released, remove it from held_directions
-        case 'KeyW':
+        case 'KeyW':        // when W is released, remove it from held_directions
             indexToRemove = held_directions.indexOf('W');
             break;
-        case 'KeyA':
+        case 'KeyA': // ditto for A
             indexToRemove = held_directions.indexOf('A');
             break;
-        case 'KeyS':
+        case 'KeyS': // ditto for S
             indexToRemove = held_directions.indexOf('S');
             break;
-        case 'KeyD':
+        case 'KeyD': // ditto for D
             indexToRemove = held_directions.indexOf('D');
             break;
     }
@@ -130,8 +123,9 @@ function randomNumberFromRange(min, max) {
 
 class Player {
     constructor() {
-        this.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2); // center player in x dimension
-        this.y = this.x; // center player in y dimension
+        // center player
+        this.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
+        this.y = this.x;
 
         this.velocity = PLAYER_VELOCITY;
     }
@@ -140,16 +134,16 @@ class Player {
         switch (held_directions[0]) // move player according to key(s) held down
         {
             case 'W': // W/w is most recently held key
-                player.y -= player.velocity * deltaTime; // move player up in y dimension
+                player.y -= player.velocity * deltaTime; // move player up
                 break;
             case 'A': // A/a is most recently held key 
-                player.x -= player.velocity * deltaTime; // move player left in x dimension
+                player.x -= player.velocity * deltaTime; // move player left
                 break;
             case 'S': // S/s is most recently held key
-                player.y += player.velocity * deltaTime; // move player down in y dimension 
+                player.y += player.velocity * deltaTime; // move player down
                 break;
             case 'D': // D/d is most recently held key
-                player.x += player.velocity * deltaTime; // move player right in x dimension
+                player.x += player.velocity * deltaTime; // move player right
                 break;
         }
 
@@ -176,9 +170,10 @@ class Player {
         }
     }
 
-    draw() { // used to draw the player to the canvas
-        ctx.fillStyle = "black"; // set fill style to black
-        ctx.fillRect(player.x, player.y, PLAYER_SIZE, PLAYER_SIZE); // draw the player as a black square
+    draw() {
+        // set fillStyle to black, then draw player to canvas as a black square
+        ctx.fillStyle = "black";
+        ctx.fillRect(player.x, player.y, PLAYER_SIZE, PLAYER_SIZE);
     }
 }
 
@@ -365,6 +360,9 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
 class SplittingProjectile extends Projectile { // this class derives from base Projectile, and splits into multiple projectiles
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
+
+        this.slope = (player.y - this.y) / (player.x - this.x);
+
         this.points = 1; // update this.points to be 5
     }
 
@@ -372,19 +370,57 @@ class SplittingProjectile extends Projectile { // this class derives from base P
         if (super.action()) return true; // perform all the same actions as the base class action() function 
 
         if (Math.random() * SPLIT_CHANCE > 0.99) {
-            let xDistance = player.x - this.x;
-            let yDistance = player.y - this.y;
+
+            console.log(this);
+
+            // make two new splitting projectiles
+            // let split1 = this;
+            // split1.size = (this.size / 2);
+            // let split2 = split1;
 
             let split1 = new SplittingProjectile(player);
-            split1 = this;
+
+            split1.x = this.x;
+            split1.y = this.y;
+            split1.size = this.size / 2;
+            split1.timeUntilPlayer = this.timeUntilPlayer;
+
             let split2 = new SplittingProjectile(player);
-            split2 = this;
 
-            split1.x = this.x + 10;
-            split1.y = this.y + 10;
+            split2.x = this.x;
+            split2.y = this.y;
+            split2.size = this.size / 2; 
+            split2.timeUntilPlayer = this.timeUntilPlayer;
 
-            split2.x = this.x - 10;
-            split2.y = this - 10;
+            // assign same x and y, or close to it (center of old?), but deflect trajectories.
+            // split1.x = parent.x - (parent.size / 4)
+            // split1.size = parent.size / 2
+
+            // redirect split1 and split2 to phantom players
+            // find angle of line from center of parent projectile to center of player, make phantoms orthogonal to that lines
+            // OR
+            // find slope of line connecting player midpoint and parent midpoint, find orthogonal line and 
+            // place phantom players on that line, +/- starting from player midpoint then redirect split1 and 2 to those phantom players
+
+ 
+            let orthogonal = -1/this.slope;
+            let distance = 5;
+            let targetX = this.x + (10 * this.dx);
+            let targetY = this.y + (10 * this.dy);
+
+            let phantom1X = targetX + (distance * orthogonal);
+            let phantom1Y = targetY + (distance * orthogonal);
+
+            split1.dx = (phantom1X - split1.x) / split1.timeUntilPlayer;
+            split1.dy = (phantom1Y - split1.y) / split1.timeUntilPlayer;
+            split1.slope = (phantom1Y - split1.y) / (phantom1X - split1.x);
+
+            let phantom2X = targetX - (distance * orthogonal);
+            let phantom2Y = targetX - (distance * orthogonal);
+
+            split2.dx = (phantom2X - split2.x) / split1.timeUntilPlayer;
+            split2.dy = (phantom2Y - split2.y) / split1.timeUntilPlayer;
+            split2.slope = (phantom2Y - this.y) / (phantom2X - this.x);
 
             projectiles.push(split1);
             projectiles.push(split2);
@@ -394,7 +430,8 @@ class SplittingProjectile extends Projectile { // this class derives from base P
     }
 
     draw() {
-        ctx.fillStyle = `rgb(255, 230, 0)`; // change fill style to yellow
+        // ctx.fillStyle = `rgb(255, 230, 0)`; // change fill style to yellow
+        ctx.fillStyle = "red";
         ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a yellow square
     }
 }
@@ -419,18 +456,18 @@ function main(currentTime) { // main function containing game loop
             break;
         case "game": // if the game is playing, perform all necessary actions
                 ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
-                deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
+                const deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
 
                 let newProjectile = Math.random() * PROJECTILE_FREQUENCY; // newProjectile is a variable used to determine whether a new projectile is spawned this frame
 
-                if (newProjectile > 0.99) {
-                    projectiles.push(new Projectile(player));
+                if (newProjectile > 0.99999 ) {
+                    // projectiles.push(new Projectile(player));
                     // projectiles.push(new BouncyProjectile(player));
                     // projectiles.push(new HomingProjectile(player));
                     // projectiles.push(new AcceleratingProjectile(player));
                     // projectiles.push(new GrowingProjectile(player));
                     // projectiles.push(new GravityProjectile(player));
-                    // projectiles.push(new SplittingProjectile(player));
+                    projectiles.push(new SplittingProjectile(player));
                 }
 
                 lastRenderTime = currentTime;
