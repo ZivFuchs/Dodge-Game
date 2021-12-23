@@ -4,6 +4,21 @@ let PLAYER_SIZE = GAME_DIMENSION * 0.05; // the player defaults to 5% the size o
 let PLAYER_VELOCITY = PLAYER_SIZE * 15; // the player velocity is relative to its size
 let PROJECTILE_SIZE = PLAYER_SIZE * 0.3; // base projectile size
 
+// declare sound variables
+let newGameNoise = '/new game.wav'; // new game
+let bounceNoise = '/Bounce.wav'; // bounce   sound credit to https://www.youtube.com/watch?v=hwn3Ox67yHQ
+let gravityNoise = '/gravity4.wav'; // gravity (louder closer, bigger)
+// let acceleratingNoise = '/accelerate.wav';
+
+// homing
+// accelerating
+// growing (louder bigger)
+
+// split
+// game over
+
+// player loop? pause/unpause? splice? player move?
+
 // declare game variables
 let projectiles = []; // array holding the projectiles, starts empty
 let points = 0;
@@ -11,6 +26,8 @@ let lastRenderTime = 0; // used in the game loop to implement frame independence
 let gameState = "title"; // gamestate can be title, game, pause, or over
 let PauseStart = 0; // used when pausing/unpausing to ensure game resumes where it left off
 let held_directions = []; // this array is used to manage which direction the player is moving
+
+let sounds = [];
 
 // declare balance constants
 let PROJECTILE_FREQUENCY = 1; // base projectile frequency
@@ -54,7 +71,8 @@ document.addEventListener('keydown', (e) => { // add eventListener waiting for k
             switch(gameState) {
                 case 'title': // if currently on title screen, switch to game
                     gameState = 'game';
-                    window.requestAnimationFrame(main); // resume game
+                    sounds.push(new Audio(newGameNoise));
+                    window.requestAnimationFrame(main); // start game
                     break;
                 case 'game': // if currently on game, switch to paused
                     gameState = 'pause';
@@ -82,6 +100,7 @@ document.addEventListener('keydown', (e) => { // add eventListener waiting for k
 
                     points = 0; // reset points
 
+                    sounds.push(new Audio(newGameNoise));
                     window.requestAnimationFrame(main); // resume game
                     break;
             }
@@ -166,6 +185,8 @@ class Player {
             if ((projectiles[i].x + projectiles[i].size >= player.x && projectiles[i].x <= player.x + PLAYER_SIZE) && 
                 (projectiles[i].y + projectiles[i].size >= player.y && projectiles[i].y <= player.y + PLAYER_SIZE)) { // if projectile intersects player
                 gameState = 'over'; // the game is over
+                // sounds.push(new Audio(gameOverNoise));
+                // gameOverNoise.play(); // play game over noise
             }
         }
     }
@@ -250,10 +271,12 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
             if (this.x < 0 || this.x > GAME_DIMENSION - this.size) { // if projectile contacts left or right wall
                 this.dx *= -1; // reverse velocity in x direction, thus 'bouncing' off the wall
                 points += this.points; // add 5 points
+                sounds.push(new Audio(bounceNoise));
             }
             if (this.y < 0 || this.y > GAME_DIMENSION - this.size) { // if projectile contacts top or bottom wall
                 this.dy *= -1; // reverse velocity in y direction, thus 'bouncing' off the wall
                 points += this.points; // add 5 points
+                sounds.push(new Audio(bounceNoise));
             }
         }
     }
@@ -299,6 +322,7 @@ class AcceleratingProjectile extends Projectile { // this class derives from Pro
         // accelerate the projectile
         this.dx += (ACCELERATION * this.dx * deltaTime); // accelerate in x dimension
         this.dy += (ACCELERATION * this.dy * deltaTime); // accelerate in y dimension
+        // sounds.push(new Audio(acceleratingNoise));
     }
 
     draw() { // used to draw the projectile to the canvas
@@ -349,6 +373,8 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
         } else {
             player.y -= this.size * GRAVITY * deltaTime / Distance;
         }
+
+        sounds.push(new Audio(gravityNoise));
     }
 
     draw() {
@@ -371,61 +397,6 @@ class SplittingProjectile extends Projectile { // this class derives from base P
 
         if (Math.random() * SPLIT_CHANCE > 0.99) {
 
-            console.log(this);
-
-            // make two new splitting projectiles
-            // let split1 = this;
-            // split1.size = (this.size / 2);
-            // let split2 = split1;
-
-            let split1 = new SplittingProjectile(player);
-
-            split1.x = this.x;
-            split1.y = this.y;
-            split1.size = this.size / 2;
-            split1.timeUntilPlayer = this.timeUntilPlayer;
-
-            let split2 = new SplittingProjectile(player);
-
-            split2.x = this.x;
-            split2.y = this.y;
-            split2.size = this.size / 2; 
-            split2.timeUntilPlayer = this.timeUntilPlayer;
-
-            // assign same x and y, or close to it (center of old?), but deflect trajectories.
-            // split1.x = parent.x - (parent.size / 4)
-            // split1.size = parent.size / 2
-
-            // redirect split1 and split2 to phantom players
-            // find angle of line from center of parent projectile to center of player, make phantoms orthogonal to that lines
-            // OR
-            // find slope of line connecting player midpoint and parent midpoint, find orthogonal line and 
-            // place phantom players on that line, +/- starting from player midpoint then redirect split1 and 2 to those phantom players
-
- 
-            let orthogonal = -1/this.slope;
-            let distance = 5;
-            let targetX = this.x + (10 * this.dx);
-            let targetY = this.y + (10 * this.dy);
-
-            let phantom1X = targetX + (distance * orthogonal);
-            let phantom1Y = targetY + (distance * orthogonal);
-
-            split1.dx = (phantom1X - split1.x) / split1.timeUntilPlayer;
-            split1.dy = (phantom1Y - split1.y) / split1.timeUntilPlayer;
-            split1.slope = (phantom1Y - split1.y) / (phantom1X - split1.x);
-
-            let phantom2X = targetX - (distance * orthogonal);
-            let phantom2Y = targetX - (distance * orthogonal);
-
-            split2.dx = (phantom2X - split2.x) / split1.timeUntilPlayer;
-            split2.dy = (phantom2Y - split2.y) / split1.timeUntilPlayer;
-            split2.slope = (phantom2Y - this.y) / (phantom2X - this.x);
-
-            projectiles.push(split1);
-            projectiles.push(split2);
-
-            return true;
         }
     }
 
@@ -455,56 +426,60 @@ function main(currentTime) { // main function containing game loop
             ctx.fillText("PRESS SPACEBAR TO BEGIN AND PAUSE", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50); // print message 50 below center of canvas
             break;
         case "game": // if the game is playing, perform all necessary actions
-                ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
-                const deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
+            ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
+            const deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
 
-                let newProjectile = Math.random() * PROJECTILE_FREQUENCY; // newProjectile is a variable used to determine whether a new projectile is spawned this frame
+            let newProjectile = Math.random() * PROJECTILE_FREQUENCY; // newProjectile is a variable used to determine whether a new projectile is spawned this frame
 
-                if (newProjectile > 0.99999 ) {
-                    // projectiles.push(new Projectile(player));
-                    // projectiles.push(new BouncyProjectile(player));
-                    // projectiles.push(new HomingProjectile(player));
-                    // projectiles.push(new AcceleratingProjectile(player));
-                    // projectiles.push(new GrowingProjectile(player));
-                    // projectiles.push(new GravityProjectile(player));
-                    projectiles.push(new SplittingProjectile(player));
-                }
+            if (newProjectile > 0.99999 ) {
+                // projectiles.push(new Projectile(player));
+                // projectiles.push(new BouncyProjectile(player));
+                // projectiles.push(new HomingProjectile(player));
+                projectiles.push(new AcceleratingProjectile(player));
+                // projectiles.push(new GrowingProjectile(player));
+                // projectiles.push(new GravityProjectile(player));
+                // projectiles.push(new SplittingProjectile(player));
+            }
 
-                lastRenderTime = currentTime;
+            lastRenderTime = currentTime;
+        
+            player.update(deltaTime); // update the player
             
-                player.update(deltaTime); // update the player
-                
-                // for each projectile in the projectiles array 
-                for (let i = 0; i < projectiles.length; i++) {
-                    projectiles[i].update(deltaTime);
+            // for each projectile in the projectiles array 
+            for (let i = 0; i < projectiles.length; i++) {
+                projectiles[i].update(deltaTime);
 
-                    if (projectiles[i].action(deltaTime)) {
-                        projectiles.splice(i, 1);
-                    }
+                if (projectiles[i].action(deltaTime)) {
+                    projectiles.splice(i, 1);
                 }
+            }
 
-                player.draw(); // draw character
-                        
-                for (let i = 0; i < projectiles.length; i++) { // for each projectile
-                    projectiles[i].draw(); // draw the projectile
-                }
+            player.draw(); // draw character
+                    
+            for (let i = 0; i < projectiles.length; i++) { // for each projectile
+                projectiles[i].draw(); // draw the projectile
+            }
 
-                ctx.font = "30px Futura"; // change font to 30px Futura
-                ctx.fillStyle = "black"; // change fill style to black
-                ctx.textAlign = "center"; // change text alignment to center
-                ctx.fillText("POINTS: " + points, 875, 975); // display points in bottom right corner
-            
-                PROJECTILE_FREQUENCY += 0.001 * deltaTime; // increase projectile frequency
-                PROJECTILE_SIZE += 0.001 * deltaTime; // increase projectile size
+            ctx.font = "30px Futura"; // change font to 30px Futura
+            ctx.fillStyle = "black"; // change fill style to black
+            ctx.textAlign = "center"; // change text alignment to center
+            ctx.fillText("POINTS: " + points, 875, 975); // display points in bottom right corner
+        
+            PROJECTILE_FREQUENCY += 0.001 * deltaTime; // increase projectile frequency
+            PROJECTILE_SIZE += 0.001 * deltaTime; // increase projectile size
 
-
-                window.requestAnimationFrame(main); 
+            // console.log(sounds);
+            for (let i = 0; i < sounds.length; i++) {
+                sounds[i].play();
+            }
+            sounds = [];
+            window.requestAnimationFrame(main); 
             break;
         case "pause": // if the game is paused, do nothing but display pause message
-                ctx.font = "30px Futura"
-                ctx.fillStyle = "black";
-                ctx.textAlign = "center";
-                ctx.fillText("PAUSED, SPACEBAR TO RESUME", GAME_DIMENSION/2, GAME_DIMENSION/2);
+            ctx.font = "30px Futura"
+            ctx.fillStyle = "black";
+            ctx.textAlign = "center";
+            ctx.fillText("PAUSED, SPACEBAR TO RESUME", GAME_DIMENSION/2, GAME_DIMENSION/2);
             break;
         case "over": // if the game is over, display gameover screen
             // display gameover message in 30 point Futura black to the center of the screen
