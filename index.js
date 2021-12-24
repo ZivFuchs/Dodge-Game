@@ -6,18 +6,29 @@ let PROJECTILE_SIZE = PLAYER_SIZE * 0.3; // base projectile size
 
 // declare sound variables
 let newGameNoise = '/new game.wav'; // new game
+let newGameNoiseVolume = 0.05;
+
+let gameOverNoise = '/gameOver.wav'; // game over
+let gameOverNoiseVolume = 0.05;
+
 let bounceNoise = '/Bounce.wav'; // bounce   sound credit to https://www.youtube.com/watch?v=hwn3Ox67yHQ
+let boucneNoiseVolume = 0.3;
+
 let gravityNoise = '/gravity4.wav'; // gravity (louder closer, bigger)
-// let acceleratingNoise = '/accelerate.wav';
+let gravityNoiseVolume = 0.1;
 
-// homing
-// accelerating
-// growing (louder bigger)
+let acceleratingNoise = '/accelerate.wav'; // accelerating
+let acceleratingNoiseVolume = 0.1;
 
-// split
-// game over
+let homingNoise = '/homing.wav' // homing
+let homingNoiseVolume = 0.05;
 
-// player loop? pause/unpause? splice? player move?
+let growingNoise = '/grow.wav' // growing (louder bigger)
+let growingNoiseVolume = 0.01;
+
+let splittingNoise = '/split.wav' // splitting
+let splittingNoiseVolume = 1;
+
 
 // declare game variables
 let projectiles = []; // array holding the projectiles, starts empty
@@ -26,7 +37,6 @@ let lastRenderTime = 0; // used in the game loop to implement frame independence
 let gameState = "title"; // gamestate can be title, game, pause, or over
 let PauseStart = 0; // used when pausing/unpausing to ensure game resumes where it left off
 let held_directions = []; // this array is used to manage which direction the player is moving
-
 let sounds = [];
 
 // declare balance constants
@@ -36,6 +46,16 @@ let ACCELERATION = 1; // base acceleration rate of AcceleratingProjectiles
 let GROW_SPEED = 30; // base speed of growth for GrowingProjectiles
 let GRAVITY = 1000; // base gravitational pull of GravityProjectiles
 let SPLIT_CHANCE = 1; // base split chance of SplittingProjectiles
+let MIN_SPLIT_SIZE = 15;
+let MIN_BOUNCE_SIZE = 15;
+
+let PROJECTILE_POINTS = 1;
+let BOUNCY_POINTS = 5;
+let HOMING_POINTS = 5;
+let ACCELERATING_POINTS = 5;
+let GRAVITY_POINTS = 50;
+let GROWING_POINTS = 10;
+let SPLITTING_POINTS = 5;
 
 // retrieve the canvas and its context, set canvas dimensions
 let canvas = document.querySelector("canvas");
@@ -71,7 +91,7 @@ document.addEventListener('keydown', (e) => { // add eventListener waiting for k
             switch(gameState) {
                 case 'title': // if currently on title screen, switch to game
                     gameState = 'game';
-                    sounds.push(new Audio(newGameNoise));
+                    PlaySound(newGameNoise, newGameNoiseVolume);
                     window.requestAnimationFrame(main); // start game
                     break;
                 case 'game': // if currently on game, switch to paused
@@ -140,6 +160,12 @@ function randomNumberFromRange(min, max) {
     return (Math.random() * (max - min + 1) + min);
 }
 
+function PlaySound(soundLink, volume) {
+    let noise = new Audio(soundLink);
+    noise.volume = volume;
+    sounds.push(noise);
+}
+
 class Player {
     constructor() {
         // center player
@@ -185,8 +211,10 @@ class Player {
             if ((projectiles[i].x + projectiles[i].size >= player.x && projectiles[i].x <= player.x + PLAYER_SIZE) && 
                 (projectiles[i].y + projectiles[i].size >= player.y && projectiles[i].y <= player.y + PLAYER_SIZE)) { // if projectile intersects player
                 gameState = 'over'; // the game is over
-                // sounds.push(new Audio(gameOverNoise));
-                // gameOverNoise.play(); // play game over noise
+                // let noise = new Audio(gameOverNoise);
+                // noise.volume = 0.1;
+                // sounds.push(noise);
+                PlaySound(gameOverNoise, gameOverNoiseVolume);
             }
         }
     }
@@ -227,7 +255,7 @@ class Projectile {
         this.dy = (player.y - this.y) / this.timeUntilPlayer; // direct the projectile at the player in y dimension
 
         this.check = false; // don't check for deletion at first, only start checking once projectile has entered the battlefield
-        this.points = 1; // the number of points associated with this projectile
+        this.points = PROJECTILE_POINTS; // the number of points associated with this projectile
     }
 
     update(deltaTime) { // update projectile's location each frame
@@ -258,7 +286,8 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
                                             // of leaving the battefield and being removed
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
-        this.points = 5; // update points value to be 5, 5 points for each bounce
+        this.size += MIN_BOUNCE_SIZE;
+        this.points = BOUNCY_POINTS; // update points value to be 5, 5 points for each bounce
     }
 
     action() {
@@ -271,12 +300,26 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
             if (this.x < 0 || this.x > GAME_DIMENSION - this.size) { // if projectile contacts left or right wall
                 this.dx *= -1; // reverse velocity in x direction, thus 'bouncing' off the wall
                 points += this.points; // add 5 points
-                sounds.push(new Audio(bounceNoise));
+
+                PlaySound(bounceNoise, boucneNoiseVolume);
+
+                if (this.size > 25) {
+                    this.size -= 25;
+                } else {
+                    return true;
+                }
             }
             if (this.y < 0 || this.y > GAME_DIMENSION - this.size) { // if projectile contacts top or bottom wall
                 this.dy *= -1; // reverse velocity in y direction, thus 'bouncing' off the wall
                 points += this.points; // add 5 points
-                sounds.push(new Audio(bounceNoise));
+                
+                PlaySound(bounceNoise, boucneNoiseVolume);
+                
+                if (this.size > 25) {
+                    this.size -= 25;
+                } else {
+                    return true;
+                }
             }
         }
     }
@@ -290,7 +333,7 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
 class HomingProjectile extends Projectile { // this projectile derives from Projectile base class, and homes onto the player periodically
     constructor(player) {
         super(player); // perform all the same actions as base constructor
-        this.points = 5; // update points to be 5
+        this.points = HOMING_POINTS; // update points to be 5
     }
     
     action(deltaTime) {
@@ -300,6 +343,8 @@ class HomingProjectile extends Projectile { // this projectile derives from Proj
             this.timeUntilPlayer = randomNumberFromRange(1, 2); // assign new speed
             this.dx = (player.x - this.x) / this.timeUntilPlayer; // assign new velocity in x dimension
             this.dy = (player.y - this.y) / this.timeUntilPlayer; // assign new velocity in y dimension
+
+            PlaySound(homingNoise, homingNoiseVolume);
         }
     }
 
@@ -312,8 +357,10 @@ class HomingProjectile extends Projectile { // this projectile derives from Proj
 class AcceleratingProjectile extends Projectile { // this class derives from Projectile base class, and accelerates as it moves
     constructor(player) {
         super(player); // perform all the same actions as base constructor
-        this.points = 5; // update points to be 5
 
+        this.points = ACCELERATING_POINTS; // update points to be 5
+        this.play = true;
+        this.proximity = 200;
     }
 
     action(deltaTime) {
@@ -322,7 +369,16 @@ class AcceleratingProjectile extends Projectile { // this class derives from Pro
         // accelerate the projectile
         this.dx += (ACCELERATION * this.dx * deltaTime); // accelerate in x dimension
         this.dy += (ACCELERATION * this.dy * deltaTime); // accelerate in y dimension
-        // sounds.push(new Audio(acceleratingNoise));
+
+        let distance = Math.sqrt(Math.pow(player.x - this.x, 2) + Math.pow(player.y - this.y, 2));
+
+        if ((this.play) && (distance < this.proximity)) {
+            console.log('play');
+
+            PlaySound(acceleratingNoise, acceleratingNoiseVolume)
+
+            this.play = false;
+        }
     }
 
     draw() { // used to draw the projectile to the canvas
@@ -334,13 +390,17 @@ class AcceleratingProjectile extends Projectile { // this class derives from Pro
 class GrowingProjectile extends Projectile { // this class derives from base Projectile, and grows as it moves
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
-        this.points = 5; // update this.points to be 5
+        this.points = GROWING_POINTS; // update this.points to be 5
     }
 
     action(deltaTime) {
         if (super.action()) return true; // perform all the same actions as the base class action() function 
 
         this.size += GROW_SPEED * deltaTime; // grow the projectile
+
+        if (Math.floor(this.size) % 11 == 0) {
+            PlaySound(growingNoise, Math.min(growingNoise * this.size), 1);
+        }
     }
 
     draw() {
@@ -352,7 +412,7 @@ class GrowingProjectile extends Projectile { // this class derives from base Pro
 class GravityProjectile extends Projectile { // this class derives from base Projectile, and draws the player closer to it
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
-        this.points = 50; // update this.points to be 5
+        this.points = GRAVITY_POINTS; // update this.points to be 5
     }
 
     action(deltaTime) {
@@ -374,7 +434,7 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
             player.y -= this.size * GRAVITY * deltaTime / Distance;
         }
 
-        sounds.push(new Audio(gravityNoise));
+        PlaySound(gravityNoise, gravityNoiseVolume);
     }
 
     draw() {
@@ -386,17 +446,49 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
 class SplittingProjectile extends Projectile { // this class derives from base Projectile, and splits into multiple projectiles
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
-
-        this.slope = (player.y - this.y) / (player.x - this.x);
-
-        this.points = 1; // update this.points to be 5
+        this.size += MIN_SPLIT_SIZE;
+        this.points = SPLITTING_POINTS; // update this.points to be 5
     }
 
     action(deltaTime) {
         if (super.action()) return true; // perform all the same actions as the base class action() function 
 
-        if (Math.random() * SPLIT_CHANCE > 0.99) {
+        if (Math.random() * SPLIT_CHANCE > 0.99 && this.size > MIN_SPLIT_SIZE) {
+            console.log('split');
 
+            let angle = Math.atan(this.dy/this.dx);
+            if (this.dx < 0) angle += Math.PI; 
+            let speedSquared = Math.pow(this.dx, 2) + Math.pow(this.dy, 2);
+
+            let angle1 = angle + Math.PI/12;
+            let slope1 = Math.tan(angle1);
+            let slope1Squared = Math.pow(slope1, 2);
+
+            let split1 = new SplittingProjectile(player);
+            split1.x = this.x;
+            split1.y = this.y;
+            split1.size = this.size / 2;
+            split1.slope = slope1;
+            split1.dx = Math.sqrt(speedSquared / (slope1Squared + 1));
+            if (this.dx < 0) split1.dx *= -1;
+            split1.dy = slope1 * split1.dx;
+            
+
+            let angle2 = angle - Math.PI/12;
+            let slope2 = Math.tan(angle2);
+            let slope2Squared = Math.pow(slope2, 2);
+
+            let split2 = new SplittingProjectile(player);
+            split2.x = this.x;
+            split2.y = this.y;
+            split2.size = this.size / 2;
+            split2.slope = slope2;
+            split2.dx = Math.sqrt(speedSquared / (slope2Squared + 1));
+            if (this.dx < 0) split2.dx *= -1;
+            split2.dy = slope2 * split2.dx;
+
+            projectiles.push(split1, split2);
+            return true;
         }
     }
 
@@ -435,10 +527,10 @@ function main(currentTime) { // main function containing game loop
                 // projectiles.push(new Projectile(player));
                 // projectiles.push(new BouncyProjectile(player));
                 // projectiles.push(new HomingProjectile(player));
-                projectiles.push(new AcceleratingProjectile(player));
+                // projectiles.push(new AcceleratingProjectile(player));
                 // projectiles.push(new GrowingProjectile(player));
                 // projectiles.push(new GravityProjectile(player));
-                // projectiles.push(new SplittingProjectile(player));
+                projectiles.push(new SplittingProjectile(player));
             }
 
             lastRenderTime = currentTime;
