@@ -4,31 +4,23 @@ let PLAYER_SIZE = GAME_DIMENSION * 0.05; // the player defaults to 5% the size o
 let PLAYER_VELOCITY = PLAYER_SIZE * 15; // the player velocity is relative to its size
 let PROJECTILE_SIZE = PLAYER_SIZE * 0.3; // base projectile size
 
-// declare sound variables
-let newGameNoise = '/new game.wav'; // new game
-let newGameNoiseVolume = 0.05;
-
-let gameOverNoise = '/gameOver.wav'; // game over
-let gameOverNoiseVolume = 0.05;
-
-let bounceNoise = '/Bounce.wav'; // bounce   sound credit to https://www.youtube.com/watch?v=hwn3Ox67yHQ
-let boucneNoiseVolume = 0.3;
-
-let gravityNoise = '/gravity4.wav'; // gravity (louder closer, bigger)
-let gravityNoiseVolume = 0.1;
-
-let acceleratingNoise = '/accelerate.wav'; // accelerating
-let acceleratingNoiseVolume = 0.1;
-
-let homingNoise = '/homing.wav' // homing
-let homingNoiseVolume = 0.05;
-
-let growingNoise = '/grow.wav' // growing (louder bigger)
-let growingNoiseVolume = 0.01;
-
-let splittingNoise = '/split.wav' // splitting
-let splittingNoiseVolume = 1;
-
+// declare sound constants
+const newGameNoise = '/new game.wav'; // new game
+const newGameNoiseVolume = 0.05;
+const gameOverNoise = '/gameOver.wav'; // game over
+const gameOverNoiseVolume = 0.05;
+const bounceNoise = '/Bounce.wav'; // bounce   sound credit to https://www.youtube.com/watch?v=hwn3Ox67yHQ
+const bounceNoiseVolume = 0.3;
+const gravityNoise = '/gravity4.wav'; // gravity (louder closer, bigger)
+const gravityNoiseVolume = 0.1;
+const acceleratingNoise = '/accelerate.wav'; // accelerating
+const acceleratingNoiseVolume = 0.1;
+const homingNoise = '/homing.wav' // homing
+const homingNoiseVolume = 0.05;
+const growingNoise = '/grow.wav' // growing (louder bigger)
+const growingNoiseVolume = 0.01;
+const splittingNoise = '/split.wav' // splitting
+const splittingNoiseVolume = 1;
 
 // declare game variables
 let projectiles = []; // array holding the projectiles, starts empty
@@ -40,14 +32,25 @@ let held_directions = []; // this array is used to manage which direction the pl
 let sounds = [];
 
 // declare balance constants
-let PROJECTILE_FREQUENCY = 1; // base projectile frequency
-let HOMING_STRENGTH = 1; // base homing frequency of HomingProjectiles
+let HOMING_CHANCE = 1; // base homing frequency of HomingProjectiles
 let ACCELERATION = 1; // base acceleration rate of AcceleratingProjectiles
 let GROW_SPEED = 30; // base speed of growth for GrowingProjectiles
 let GRAVITY = 1000; // base gravitational pull of GravityProjectiles
 let SPLIT_CHANCE = 1; // base split chance of SplittingProjectiles
-let MIN_SPLIT_SIZE = 15;
-let MIN_BOUNCE_SIZE = 15;
+let MIN_SPLIT_SIZE = 30;
+let MIN_BOUNCE_SIZE = 30;
+let PROJECTILE_FREQUENCY = 0.99;
+let PROJECTILE_FREQUENCY_INCREMENT = 0.0005;
+let PROJECTILE_SIZE_INCREMENT = 0.05;
+
+let PROJECTILE_TOTAL = 1000;
+let STANDARD_FREQUENCY = 800;
+let BOUNCY_FREQUENCY = 850;
+let HOMING_FREQUENCY = 900;
+let ACCELERATING_FREQUENCY = 925;
+let GROWING_FREQUENCY = 950;
+let GRAVITY_FREQUENCY = 975;
+let SPLITTING_FREQUENCY = 1000;
 
 let PROJECTILE_POINTS = 1;
 let BOUNCY_POINTS = 5;
@@ -90,8 +93,7 @@ document.addEventListener('keydown', (e) => { // add eventListener waiting for k
         case 'Space': // if space is the key pressed
             switch(gameState) {
                 case 'title': // if currently on title screen, switch to game
-                    gameState = 'game';
-                    PlaySound(newGameNoise, newGameNoiseVolume);
+                    RestartGame();
                     window.requestAnimationFrame(main); // start game
                     break;
                 case 'game': // if currently on game, switch to paused
@@ -104,24 +106,7 @@ document.addEventListener('keydown', (e) => { // add eventListener waiting for k
                     window.requestAnimationFrame(main); // resume game
                     break;
                 case 'over': // if currently over, restart game
-                    gameState = 'game';
-
-                    // reset projectile size and frequency
-                    let PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
-                    PROJECTILE_FREQUENCY = 1;
-
-                    // empty projectiles and held_directions arrays
-                    projectiles = [];
-                    held_directions = [];
-
-                    // recenter the player
-                    player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
-                    player.y = player.x;
-
-                    points = 0; // reset points
-
-                    sounds.push(new Audio(newGameNoise));
-                    window.requestAnimationFrame(main); // resume game
+                    RestartGame();
                     break;
             }
 
@@ -153,6 +138,55 @@ document.addEventListener('keyup', (e) => { // when a key is released
         held_directions.splice(indexToRemove, 1);
     }
 });
+
+function RestartGame() {
+    gameState = 'game';
+
+    // reset projectile size and frequency
+    PROJECTILE_SIZE = PLAYER_SIZE * 0.3;
+
+    // recenter the player
+    player.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
+    player.y = player.x;
+
+    projectiles = []; // array holding the projectiles, starts empty
+    points = 0;
+    gameState = "game";
+    held_directions = []; // this array is used to manage which direction the player is moving
+    sounds = [];
+    PROJECTILE_FREQUENCY = 0.99;
+    PROJECTILE_TOTAL = 1000;
+    STANDARD_FREQUENCY = 800;
+    BOUNCY_FREQUENCY = 850;
+    HOMING_FREQUENCY = 900;
+    ACCELERATING_FREQUENCY = 925;
+    GROWING_FREQUENCY = 950;
+    GRAVITY_FREQUENCY = 975;
+    SPLITTING_FREQUENCY = 1000;
+
+
+    sounds.push(new Audio(newGameNoise));
+    window.requestAnimationFrame(main); // resume game
+
+// let lastRenderTime = 0; // used in the game loop to implement frame independence
+// let PauseStart = 0; // used when pausing/unpausing to ensure game resumes where it left off
+// let HOMING_STRENGTH = 1; // base homing frequency of HomingProjectiles
+// let ACCELERATION = 1; // base acceleration rate of AcceleratingProjectiles
+// let GROW_SPEED = 30; // base speed of growth for GrowingProjectiles
+// let GRAVITY = 1000; // base gravitational pull of GravityProjectiles
+// let SPLIT_CHANCE = 1; // base split chance of SplittingProjectiles
+// let MIN_SPLIT_SIZE = 30;
+// let MIN_BOUNCE_SIZE = 15;
+// let PROJECTILE_FREQUENCY_INCREMENT = 1;
+// let PROJECTILE_SIZE_INCREMENT = 1;
+// let PROJECTILE_POINTS = 1;
+// let BOUNCY_POINTS = 5;
+// let HOMING_POINTS = 5;
+// let ACCELERATING_POINTS = 5;
+// let GRAVITY_POINTS = 50;
+// let GROWING_POINTS = 10;
+// let SPLITTING_POINTS = 5;
+}
 
 // input two numnbers, min and max
 // return random number between min and max
@@ -286,7 +320,7 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
                                             // of leaving the battefield and being removed
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
-        this.size += MIN_BOUNCE_SIZE;
+        this.size += 2 * MIN_BOUNCE_SIZE;
         this.points = BOUNCY_POINTS; // update points value to be 5, 5 points for each bounce
     }
 
@@ -301,10 +335,10 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
                 this.dx *= -1; // reverse velocity in x direction, thus 'bouncing' off the wall
                 points += this.points; // add 5 points
 
-                PlaySound(bounceNoise, boucneNoiseVolume);
+                PlaySound(bounceNoise, bounceNoiseVolume);
 
-                if (this.size > 25) {
-                    this.size -= 25;
+                if (this.size > 10) {
+                    this.size -= 10;
                 } else {
                     return true;
                 }
@@ -313,10 +347,10 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
                 this.dy *= -1; // reverse velocity in y direction, thus 'bouncing' off the wall
                 points += this.points; // add 5 points
                 
-                PlaySound(bounceNoise, boucneNoiseVolume);
+                PlaySound(bounceNoise, bounceNoiseVolume);
                 
-                if (this.size > 25) {
-                    this.size -= 25;
+                if (this.size > MIN_BOUNCE_SIZE) {
+                    this.size -= MIN_BOUNCE_SIZE;
                 } else {
                     return true;
                 }
@@ -339,7 +373,7 @@ class HomingProjectile extends Projectile { // this projectile derives from Proj
     action(deltaTime) {
         if (super.action()) return true; // perform all the same actions as base action function
         
-        if (Math.random() * HOMING_STRENGTH > 0.99) {        // randomly decide whether to redirect toward the player
+        if (Math.random() * HOMING_CHANCE > 0.99) {        // randomly decide whether to redirect toward the player
             this.timeUntilPlayer = randomNumberFromRange(1, 2); // assign new speed
             this.dx = (player.x - this.x) / this.timeUntilPlayer; // assign new velocity in x dimension
             this.dy = (player.y - this.y) / this.timeUntilPlayer; // assign new velocity in y dimension
@@ -493,8 +527,7 @@ class SplittingProjectile extends Projectile { // this class derives from base P
     }
 
     draw() {
-        // ctx.fillStyle = `rgb(255, 230, 0)`; // change fill style to yellow
-        ctx.fillStyle = "red";
+        ctx.fillStyle = `rgb(255, 230, 0)`; // change fill style to yellow
         ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a yellow square
     }
 }
@@ -521,16 +554,36 @@ function main(currentTime) { // main function containing game loop
             ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
             const deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
 
-            let newProjectile = Math.random() * PROJECTILE_FREQUENCY; // newProjectile is a variable used to determine whether a new projectile is spawned this frame
+            // if (Math.random() * PROJECTILE_FREQUENCY > 0.99) {
+            //     let projectileType = PROJECTILE_TOTAL * Math.random();
 
-            if (newProjectile > 0.99999 ) {
+            //     if (projectileType < STANDARD_FREQUENCY) { // base
+            //         projectiles.push(new Projectile(player));
+            //     } else if (projectileType < BOUNCY_FREQUENCY) { // bouncy
+            //         projectiles.push(new BouncyProjectile(player));
+            //     } else if (projectileType < HOMING_FREQUENCY) { // homing
+            //         projectiles.push(new HomingProjectile(player));
+            //     } else if (projectileType < ACCELERATING_FREQUENCY) { // accelerating
+            //         projectiles.push(new AcceleratingProjectile(player));
+            //     } else if (projectileType < GROWING_FREQUENCY) { // growing
+            //         projectiles.push(new GrowingProjectile(player));
+            //     } else if (projectileType < GRAVITY_FREQUENCY) { // gravity
+            //         projectiles.push(new GravityProjectile(player));
+            //     } else { // splitting
+            //         projectiles.push(new SplittingProjectile(player));
+            //     }
+
+            //     projectiles.push(new Projectile(player));
+            // }
+
+            if (Math.random() * PROJECTILE_FREQUENCY > 0.99) {
                 // projectiles.push(new Projectile(player));
-                // projectiles.push(new BouncyProjectile(player));
+                projectiles.push(new BouncyProjectile(player));
                 // projectiles.push(new HomingProjectile(player));
                 // projectiles.push(new AcceleratingProjectile(player));
                 // projectiles.push(new GrowingProjectile(player));
                 // projectiles.push(new GravityProjectile(player));
-                projectiles.push(new SplittingProjectile(player));
+                // projectiles.push(new SplittingProjectile(player));
             }
 
             lastRenderTime = currentTime;
@@ -557,8 +610,8 @@ function main(currentTime) { // main function containing game loop
             ctx.textAlign = "center"; // change text alignment to center
             ctx.fillText("POINTS: " + points, 875, 975); // display points in bottom right corner
         
-            PROJECTILE_FREQUENCY += 0.001 * deltaTime; // increase projectile frequency
-            PROJECTILE_SIZE += 0.001 * deltaTime; // increase projectile size
+            PROJECTILE_FREQUENCY += PROJECTILE_FREQUENCY_INCREMENT * deltaTime; // increase projectile frequency
+            PROJECTILE_SIZE += PROJECTILE_SIZE_INCREMENT * deltaTime; // increase projectile size
 
             // console.log(sounds);
             for (let i = 0; i < sounds.length; i++) {
