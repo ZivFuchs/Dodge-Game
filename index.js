@@ -470,7 +470,7 @@ class SplittingProjectile extends Projectile { // this class derives from base P
             if (this.dx < 0) angle += Math.PI; 
             let speedSquared = Math.pow(this.dx, 2) + Math.pow(this.dy, 2);
 
-            let angle1 = angle + Math.PI/12;
+            let angle1 = angle + Math.PI/24;
             let slope1 = Math.tan(angle1);
 
             let split1 = new SplittingProjectile(player);
@@ -482,7 +482,7 @@ class SplittingProjectile extends Projectile { // this class derives from base P
             if (this.dx < 0) split1.dx *= -1;
             split1.dy = slope1 * split1.dx;
         
-            let angle2 = angle - Math.PI/12;
+            let angle2 = angle - Math.PI/24;
             let slope2 = Math.tan(angle2);
 
             let split2 = new SplittingProjectile(player);
