@@ -13,7 +13,7 @@ const BOUNCE_VOLUME = 0.3;
 const GRAVITY_NOISE = '/sounds/gravity4.wav'; // gravity (louder closer, bigger)
 const GRAVITY_VOLUME = 0.1;
 const ACCELERATING_NOISE = '/sounds/accelerate.wav'; // accelerating
-const ACCLERATING_VOLUME = 0.1;
+const ACCLERATING_VOLUME = 0.4;
 const ACCELERATING_NOISE_PROXIMITY = 350;
 const HOMING_NOISE = '/sounds/homing.wav' // homing
 const HOMING_VOLUME = 0.05;
@@ -26,15 +26,15 @@ const SPLITTING_VOLUME = 0.3;
 const MIN_SPLIT_SIZE = 30;
 const MIN_BOUNCE_SIZE = 30;
 const BOUNCE_DECREMENT = 10;
-const PROJECTILE_FREQUENCY_INCREMENT = 0.005;
-const PROJECTILE_SIZE_INCREMENT = 0.005;
-const BASE_PROJECTILE_CHANCE_DECREMENT = 10;
+const PROJECTILE_FREQUENCY_INCREMENT = 0.5;
+const PROJECTILE_SIZE_INCREMENT = 0.5;
+const BASE_PROJECTILE_CHANCE_DECREMENT = 50;
 
-let homingChance = 0.5; // base homing frequency of HomingProjectiles
+let homingChance = 0.99; // base homing frequency of HomingProjectiles
 let accelerationRate = 1; // base acceleration rate of AcceleratingProjectiles
 let growSpeed = 30; // base speed of growth for GrowingProjectiles
 let gravityStrength = 1000; // base gravitational pull of GravityProjectiles
-let splitChance = 3; // base split chance of SplittingProjectiles
+let splitChance = 1; // base split chance of SplittingProjectiles
 
 let PROJECTILE_POINTS = 1;
 let BOUNCY_PROJECTILE_POINTS = 5;
@@ -57,7 +57,7 @@ let lastRenderTime = 0;
 // declare balance variables
 let projectileSize = PLAYER_SIZE * 0.3; // base projectile size
 let projectileFrequency = 1;
-let baseProjectilePercentChance = 80;
+let baseProjectilePercentChance = 95;
 
 
 function RestartGame() {
@@ -78,6 +78,7 @@ function RestartGame() {
 function IncreaseDifficulty(deltaTime) {
     projectileFrequency += PROJECTILE_FREQUENCY_INCREMENT * deltaTime;
     projectileSize += PROJECTILE_SIZE_INCREMENT * deltaTime;
+    baseProjectilePercentChance -= BASE_PROJECTILE_CHANCE_DECREMENT * deltaTime;
 }
 
 function SpawnNewProjectile(deltaTime) {
@@ -458,7 +459,7 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
 class SplittingProjectile extends Projectile { // this class derives from base Projectile, and splits into multiple projectiles
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
-        this.size += MIN_SPLIT_SIZE;
+        this.size += 2 * MIN_SPLIT_SIZE;
         this.points = SPLITTING_PROJECTILE_POINTS; // update this.points to be 5
     }
 
