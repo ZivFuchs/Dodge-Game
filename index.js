@@ -24,26 +24,28 @@ const SPLITTING_NOISE = '/sounds/split.wav';
 const SPLITTING_VOLUME = 0.3;
 
 // declare balance constants
-const MIN_SPLIT_SIZE = 15;
-const MIN_BOUNCE_SIZE = 30;
-const BOUNCE_DECREMENT = 10;
 const PROJECTILE_FREQUENCY_INCREMENT = 0.5;
 const PROJECTILE_SIZE_INCREMENT = 0.5;
 const BASE_PROJECTILE_CHANCE_DECREMENT = 50;
+const PROJECTILE_SPEED_INCREMENT = 0.5;
 
-let homingChance = 1;
-let accelerationRate = 1;
-let growSpeed = 30;
-let gravityStrength = 1500;
-let splitChance = 1;
+const MIN_SPLIT_SIZE = 15;
+const MIN_BOUNCE_SIZE = 30;
+const BOUNCE_DECREMENT = 10;
+const HOMING_CHANCE = 1;
+const ACCELERATION_RATE = 1;
+const GROW_SPEED = 30;
+const GRAVITY_STRENGTH = 1500;
+const SPLIT_CHANCE = 1;
 
-let PROJECTILE_POINTS = 1;
-let BOUNCY_PROJECTILE_POINTS = 5;
-let HOMING_PROJECTILE_POINTS = 10;
-let ACCELERATING_PROJECTILE_POINTS = 10;
-let GROWING_PROJECTILE_POINTS = 10;
-let GRAVITY_PROJECTILE_POINTS = 50;
-let SPLITTING_PROJECTILE_POINTS = 10;
+// declare point constants
+const PROJECTILE_POINTS = 1;
+const BOUNCY_PROJECTILE_POINTS = 5;
+const HOMING_PROJECTILE_POINTS = 10;
+const ACCELERATING_PROJECTILE_POINTS = 10;
+const GROWING_PROJECTILE_POINTS = 10;
+const GRAVITY_PROJECTILE_POINTS = 50;
+const SPLITTING_PROJECTILE_POINTS = 10;
 
 // declare game variables
 let projectiles = [];
@@ -59,6 +61,7 @@ let lastRenderTime = 0;
 let projectileSize = PLAYER_SIZE * 0.3;
 let projectileFrequency = 1;
 let baseProjectilePercentChance = 85;
+let projectileSpeed = 1;
 
 
 function RestartGame() {
@@ -80,6 +83,7 @@ function IncreaseDifficulty(deltaTime) {
     projectileFrequency += PROJECTILE_FREQUENCY_INCREMENT * deltaTime;
     projectileSize += PROJECTILE_SIZE_INCREMENT * deltaTime;
     baseProjectilePercentChance -= BASE_PROJECTILE_CHANCE_DECREMENT * deltaTime;
+    projectileSpeed += PROJECTILE_SIZE_INCREMENT * deltaTime;
 }
 
 function SpawnNewProjectile(deltaTime) {
@@ -251,7 +255,7 @@ class Projectile {
         }
 
         // randomly assign each projectile a velocity
-        this.timeUntilPlayer = randomNumberFromRange(1, 2);
+        this.timeUntilPlayer = randomNumberFromRange(1, 2) * projectileSpeed;
         this.dx = (player.x - this.x) / this.timeUntilPlayer;
         this.dy = (player.y - this.y) / this.timeUntilPlayer;
 
@@ -353,7 +357,7 @@ class HomingProjectile extends Projectile { // this projectile derives from Proj
     action(deltaTime) {
         if (super.action()) return true;
         
-        if (Math.random() * homingChance > 0.99) {        // randomly decide whether to redirect toward the player
+        if (Math.random() * HOMING_CHANCE > 0.99) { // randomly decide whether to redirect toward the player
             this.timeUntilPlayer = randomNumberFromRange(1, 2);
             this.dx = (player.x - this.x) / this.timeUntilPlayer;
             this.dy = (player.y - this.y) / this.timeUntilPlayer;
@@ -381,8 +385,8 @@ class AcceleratingProjectile extends Projectile { // this class derives from Pro
         if (super.action()) return true;
 
         // accelerate the projectile
-        this.dx += (accelerationRate * this.dx * deltaTime);
-        this.dy += (accelerationRate * this.dy * deltaTime);
+        this.dx += (ACCELERATION_RATE * this.dx * deltaTime);
+        this.dy += (ACCELERATION_RATE * this.dy * deltaTime);
 
         let distance = Math.sqrt(Math.pow(player.x - this.x, 2) + Math.pow(player.y - this.y, 2));
 
@@ -407,7 +411,7 @@ class GrowingProjectile extends Projectile { // this class derives from base Pro
     action(deltaTime) {
         if (super.action()) return true;
 
-        this.size += growSpeed * deltaTime;
+        this.size += GROW_SPEED * deltaTime;
 
         if (Math.floor(this.size) % GROWING_FREQUENCY == 0) { // play the growing sound effect periodically
             PlaySound(GROWING_NOISE, Math.min(GROWING_VOLUME * this.size, 1));
@@ -435,15 +439,15 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
 
         // pull the player in according to their distance and the projectile's size
         if (xDistance < 0) {
-            player.x += this.size * gravityStrength * deltaTime / Distance;
+            player.x += this.size * GRAVITY_STRENGTH * deltaTime / Distance;
         } else {
-            player.x -= this.size * gravityStrength * deltaTime / Distance;
+            player.x -= this.size * GRAVITY_STRENGTH * deltaTime / Distance;
         }
 
         if (yDistance < 0) {
-            player.y += this.size * gravityStrength * deltaTime / Distance;
+            player.y += this.size * GRAVITY_STRENGTH * deltaTime / Distance;
         } else {
-            player.y -= this.size * gravityStrength * deltaTime / Distance;
+            player.y -= this.size * GRAVITY_STRENGTH * deltaTime / Distance;
         }
 
         PlaySound(GRAVITY_NOISE, GRAVITY_VOLUME);
@@ -465,7 +469,7 @@ class SplittingProjectile extends Projectile { // this class derives from base P
     action(deltaTime) {
         if (super.action()) return true;
 
-        if (Math.random() * splitChance > 0.99 && this.size > MIN_SPLIT_SIZE) { // if the projectile is large enough, randomly split
+        if (Math.random() * SPLIT_CHANCE > 0.99 && this.size > MIN_SPLIT_SIZE) { // if the projectile is large enough, randomly split
             let angle = Math.atan(this.dy/this.dx);
             if (this.dx < 0) angle += Math.PI; 
             let speedSquared = Math.pow(this.dx, 2) + Math.pow(this.dy, 2);
