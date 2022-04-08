@@ -92,26 +92,26 @@ function SpawnNewProjectile(deltaTime) {
 
     if (Math.floor(newProjectile) - Math.floor(PreviousValue) > 0) {
         let projectileType = randomNumberFromRange(1, 100);
-
-        if (projectileType < baseProjectilePercentChance) {
-            projectiles.push(new Projectile(player));
-        } else {
-            projectileType = randomNumberFromRange(0, 6);
+        projectiles.push(new BouncyProjectile(player));
+        // if (projectileType < baseProjectilePercentChance) {
+        //     projectiles.push(new Projectile(player));
+        // } else {
+        //     projectileType = randomNumberFromRange(0, 6);
     
-            if (projectileType <= 1) {
-                projectiles.push(BouncyProjectile(player));
-            } else if (projectileType <= 2) {
-                projectiles.push(new HomingProjectile(player));
-            } else if (projectileType <= 3) {
-                projectiles.push(new AcceleratingProjectile(player));
-            } else if (projectileType <= 4) {
-                projectiles.push(new GrowingProjectile(player));
-            } else if (projectileType <= 5) {
-                projectiles.push(new GravityProjectile(player));
-            } else {
-                projectiles.push(new SplittingProjectile(player));
-            }
-        }
+        //     if (projectileType <= 1) {
+        //         projectiles.push(BouncyProjectile(player));
+        //     } else if (projectileType <= 2) {
+        //         projectiles.push(new HomingProjectile(player));
+        //     } else if (projectileType <= 3) {
+        //         projectiles.push(new AcceleratingProjectile(player));
+        //     } else if (projectileType <= 4) {
+        //         projectiles.push(new GrowingProjectile(player));
+        //     } else if (projectileType <= 5) {
+        //         projectiles.push(new GravityProjectile(player));
+        //     } else {
+        //         projectiles.push(new SplittingProjectile(player));
+        //     }
+        // }
     }
 }
 
@@ -303,6 +303,21 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
         this.points = BOUNCY_PROJECTILE_POINTS;
     }
 
+    bounce(checkForBounce, bounceX, bounceY, resetX, resetY) {
+        if (checkForBounce) {
+            if (resetX) this.x = 0;
+            if (resetY) this.y = 0;
+            if (bounceX) this.dx *= -1;
+            if (bounceY) this.dy *= -1;
+    
+            if (this.size > MIN_BOUNCE_SIZE) this.size -= BOUNCE_DECREMENT;
+            else return true;
+    
+            points += this.points;
+            PlaySound(BOUNCE_NOISE, BOUNCE_VOLUME);
+        }
+    }
+
     action() {
         if ((this.x + this.size >= player.x && this.x <= player.x + player.size) && (this.y + this.size >= player.y && this.y <= player.y + player.size)) {
             gameState = 'over';
@@ -314,32 +329,30 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
             this.checkForBounce = true;
         }
 
-        if (this.checkForBounce) { 
-            if (this.x < 0 || this.x > GAME_DIMENSION - this.size) { // if projectile contacts left or right wall
-                this.dx *= -1; // reverse velocity in x direction
-                points += this.points;
+        let bounce = false;
+        let bounceX = false;
+        let bounceY = false;
+        let resetX = false;
+        let resetY = false;
 
-                PlaySound(BOUNCE_NOISE, BOUNCE_VOLUME);
-
-                if (this.size > MIN_BOUNCE_SIZE) {
-                    this.size -= BOUNCE_DECREMENT;
-                } else {
-                    return true; // return true, removing the projectile
-                }
-            }
-            if (this.y < 0 || this.y > GAME_DIMENSION - this.size) { // if projectile contacts top or bottom wall
-                this.dy *= -1; // reverse velocity in y direction
-                points += this.points;
-                
-                PlaySound(BOUNCE_NOISE, BOUNCE_VOLUME);
-                
-                if (this.size > MIN_BOUNCE_SIZE) {
-                    this.size -= BOUNCE_DECREMENT;
-                } else {
-                    return true;
-                }
-            }
+        if (this.x < 0) {
+            resetX = true;
+            bounceX = true;
+            bounce = true;
+        } else if (this.x > GAME_DIMENSION - this.size) {
+            bounceX = true;
+            bounce = true;
         }
+        if (this.y < 0) {
+            resetY = true;
+            bounceY = true;
+            bounce = true;
+        } else if (this.y > GAME_DIMENSION - this.size) {
+            bounceY = true;
+            bounce = true;
+        }
+
+        if (bounce) return this.bounce(this.checkForBounce, bounceX, bounceY, resetX, resetY);
     }
 
     draw() {
