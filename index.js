@@ -1,40 +1,41 @@
 // declare dimensional constants
-const GAME_DIMENSION = 1000; // side length of the battlefield
-const PLAYER_SIZE = GAME_DIMENSION * 0.05; // the player defaults to 5% the size of the battlefield
-const PLAYER_SPEED = PLAYER_SIZE * 15; // the player velocity is relative to its size
+const GAME_DIMENSION = 1000;
+const PLAYER_SIZE = GAME_DIMENSION * 0.05;
+const PLAYER_SPEED = PLAYER_SIZE * 15;
 
 // declare sound constants
-const NEW_GAME_NOISE = '/sounds/new game.wav'; // new game
+const NEW_GAME_NOISE = '/sounds/new game.wav';
 const NEW_GAME_VOLUME = 0.05;
-const GAME_OVER_NOISE = '/sounds/gameOver.wav'; // game over
+const GAME_OVER_NOISE = '/sounds/gameOver.wav';
 const GAME_OVER_VOLUME = 0.05;
-const BOUNCE_NOISE = '/sounds/Bounce.wav'; // bounce sound credit to https://www.youtube.com/watch?v=hwn3Ox67yHQ
+const BOUNCE_NOISE = '/sounds/Bounce.wav'; // sound credit to https://www.youtube.com/watch?v=hwn3Ox67yHQ
 const BOUNCE_VOLUME = 0.3;
-const GRAVITY_NOISE = '/sounds/gravity4.wav'; // gravity (louder closer, bigger)
+const GRAVITY_NOISE = '/sounds/gravity4.wav';
 const GRAVITY_VOLUME = 0.1;
-const ACCELERATING_NOISE = '/sounds/accelerate.wav'; // accelerating
+const ACCELERATING_NOISE = '/sounds/accelerate.wav';
 const ACCLERATING_VOLUME = 0.4;
 const ACCELERATING_NOISE_PROXIMITY = 350;
-const HOMING_NOISE = '/sounds/homing.wav' // homing
+const HOMING_NOISE = '/sounds/homing.wav';
 const HOMING_VOLUME = 0.05;
-const GROWING_NOISE = '/sounds/grow.wav' // growing (louder bigger)
+const GROWING_NOISE = '/sounds/grow.wav';
 const GROWING_VOLUME = 0.01;
-const SPLITTING_NOISE = '/sounds/split.wav' // splitting
+const GROWING_FREQUENCY = 11;
+const SPLITTING_NOISE = '/sounds/split.wav';
 const SPLITTING_VOLUME = 0.3;
 
 // declare balance constants
-const MIN_SPLIT_SIZE = 30;
+const MIN_SPLIT_SIZE = 15;
 const MIN_BOUNCE_SIZE = 30;
 const BOUNCE_DECREMENT = 10;
 const PROJECTILE_FREQUENCY_INCREMENT = 0.5;
 const PROJECTILE_SIZE_INCREMENT = 0.5;
 const BASE_PROJECTILE_CHANCE_DECREMENT = 50;
 
-let homingChance = 0.99; // base homing frequency of HomingProjectiles
-let accelerationRate = 1; // base acceleration rate of AcceleratingProjectiles
-let growSpeed = 30; // base speed of growth for GrowingProjectiles
-let gravityStrength = 1000; // base gravitational pull of GravityProjectiles
-let splitChance = 1; // base split chance of SplittingProjectiles
+let homingChance = 1;
+let accelerationRate = 1;
+let growSpeed = 30;
+let gravityStrength = 1500;
+let splitChance = 1;
 
 let PROJECTILE_POINTS = 1;
 let BOUNCY_PROJECTILE_POINTS = 5;
@@ -45,30 +46,30 @@ let GRAVITY_PROJECTILE_POINTS = 50;
 let SPLITTING_PROJECTILE_POINTS = 10;
 
 // declare game variables
-let projectiles = []; // array holding the projectiles, starts empty
+let projectiles = [];
 let points = 0;
 let PauseStart = 0; // used when pausing/unpausing to ensure game resumes where it left off
 let held_directions = []; // this array is used to manage which direction the player is moving
 let sounds = [];
 let newProjectile = 0;
-let gameState = "title";
+let gameState = "title"; // can be title, game, pause, or over
 let lastRenderTime = 0;
 
 // declare balance variables
-let projectileSize = PLAYER_SIZE * 0.3; // base projectile size
+let projectileSize = PLAYER_SIZE * 0.3;
 let projectileFrequency = 1;
-let baseProjectilePercentChance = 95;
+let baseProjectilePercentChance = 85;
 
 
 function RestartGame() {
     // reset game variables
-    projectiles = []; // array holding the projectiles, starts empty
+    projectiles = [];
     points = 0;
     lastRenderTime = Date.now(); // used in the game loop to implement frame independence
-    gameState = "game"; // gamestate can be title, game, pause, or over
-    held_directions = []; // this array is used to manage which direction the player is moving
+    gameState = "game";
+    held_directions = [];
     sounds = [];
-    projectileSize = PLAYER_SIZE * 0.3; // base projectile size
+    projectileSize = PLAYER_SIZE * 0.3;
     player.x = player.y = GAME_DIMENSION/2 - PLAYER_SIZE/2;
 
     PlaySound(NEW_GAME_NOISE, NEW_GAME_VOLUME);
@@ -111,33 +112,32 @@ function SpawnNewProjectile(deltaTime) {
 }
 
 function DrawProjectiles() {
-    for (let i = 0; i < projectiles.length; i++) { // for each projectile
-        projectiles[i].draw(); // draw the projectile
+    for (let i = 0; i < projectiles.length; i++) {
+        projectiles[i].draw();
     }
 }
 
 function DisplayTitleScreen() {
-    ctx.fillstyle = "black" // change fill style to black
-    ctx.textAlign = "center" // align text to the center
+    ctx.fillstyle = "black";
+    ctx.textAlign = "center";
     
-    ctx.font = "60px Futura" // change font to 60px Futura
-    ctx.fillText("DODGE GAME", GAME_DIMENSION/2, 100); // print "DODGE GAME" centered in x, 100 in y
+    ctx.font = "60px Futura"
+    ctx.fillText("DODGE GAME", GAME_DIMENSION/2, 100);
 
-    ctx.font = "30px Futura" // change font to 30px Futura
-    ctx.fillText("AVOID THE PROJECTILES AS LONG AS POSSIBLE", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50); // print message 50 above center of canvas
-    ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2); // print message to center of canvas
-    ctx.fillText("PRESS SPACEBAR TO BEGIN AND PAUSE", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50); // print message 50 below center of canvas
+    ctx.font = "30px Futura";
+    ctx.fillText("AVOID THE PROJECTILES AS LONG AS POSSIBLE", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50);
+    ctx.fillText("USE W/A/S/D TO MOVE", GAME_DIMENSION/2, GAME_DIMENSION/2);
+    ctx.fillText("PRESS SPACEBAR TO BEGIN AND PAUSE", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
 }
 
 function DisplayPoints() {
-    ctx.font = "30px Futura"; // change font to 30px Futura
-    ctx.fillStyle = "black"; // change fill style to black
-    ctx.textAlign = "center"; // change text alignment to center
-    ctx.fillText("POINTS: " + points, 875, 975); // display points in bottom right corner
+    ctx.font = "30px Futura";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "center";
+    ctx.fillText("POINTS: " + points, 875, 975);
 }
 
 function UpdateProjectiles(deltaTime) {
-    // for each projectile in the projectiles array 
     for (let i = 0; i < projectiles.length; i++) {
         projectiles[i].update(deltaTime);
 
@@ -155,24 +155,21 @@ function PlayAndClearSounds() {
 }
 
 function DisplayPauseMessage() {
-    ctx.font = "30px Futura"
+    ctx.font = "30px Futura";
     ctx.fillStyle = "black";
     ctx.textAlign = "center";
     ctx.fillText("PAUSED, SPACEBAR TO RESUME", GAME_DIMENSION/2, GAME_DIMENSION/2);
 }
 
 function DisplayGameOverMessage() {
-    // display gameover message in 30 point Futura black to the center of the screen
-    ctx.font = "30px Futura"; // change font to 30px Futura
-    ctx.fillStyle = "black"; // change fill style to black
-    ctx.textAlign = "center"; // change text alignment to center
-    ctx.fillText("GAME OVER", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50); // print "GAME OVER" 50 above center of canvas
-    ctx.fillText("POINTS: " + points, GAME_DIMENSION/2, GAME_DIMENSION/2); // display points in center of canvas
-    ctx.fillText("TO START OVER, PRESS SPACEBAR", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50); // display message 50 below center of canvas
+    ctx.font = "30px Futura";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", GAME_DIMENSION/2, GAME_DIMENSION/2 - 50);
+    ctx.fillText("POINTS: " + points, GAME_DIMENSION/2, GAME_DIMENSION/2);
+    ctx.fillText("TO START OVER, PRESS SPACEBAR", GAME_DIMENSION/2, GAME_DIMENSION/2 + 50);
 }
 
-// input two numnbers, min and max
-// return random number between min and max
 function randomNumberFromRange(min, max) {
     return (Math.random() * (max - min + 1) + min);
 }
@@ -185,7 +182,6 @@ function PlaySound(soundLink, volume) {
 
 class Player {
     constructor() {
-        // center player
         this.x = (GAME_DIMENSION / 2) - (PLAYER_SIZE / 2);
         this.y = this.x;
 
@@ -226,7 +222,6 @@ class Player {
     }
 
     draw() {
-        // set fillStyle to black, then draw player to canvas as a black square
         ctx.fillStyle = "black";
         ctx.fillRect(player.x, player.y, PLAYER_SIZE, PLAYER_SIZE);
     }
@@ -234,7 +229,7 @@ class Player {
 
 class Projectile {
     constructor(player) {
-        this.size = projectileSize * randomNumberFromRange(0.5, 1.5); // randomly assign each projectile a size
+        this.size = projectileSize * randomNumberFromRange(0.5, 1.5);
 
         switch(Math.floor(randomNumberFromRange(0,3))) { // randomly place each projectile outside of the game screen
             case 0: // above battlefield
@@ -256,26 +251,29 @@ class Projectile {
         }
 
         // randomly assign each projectile a velocity
-        this.timeUntilPlayer = randomNumberFromRange(1, 2); // randomly assign the projectile a speed
-        this.dx = (player.x - this.x) / this.timeUntilPlayer; // direct the projectile at the player in x dimension
-        this.dy = (player.y - this.y) / this.timeUntilPlayer; // direct the projectile at the player in y dimension
+        this.timeUntilPlayer = randomNumberFromRange(1, 2);
+        this.dx = (player.x - this.x) / this.timeUntilPlayer;
+        this.dy = (player.y - this.y) / this.timeUntilPlayer;
 
         this.checkForDeletion = false; // don't check for deletion at first, only start checking once projectile has entered the battlefield
-        this.points = PROJECTILE_POINTS; // the number of points associated with this projectile
+        this.points = PROJECTILE_POINTS;
     }
 
     update(deltaTime) { // update projectile's location each frame
-        this.x += this.dx * deltaTime; // update x coordinate
-        this.y += this.dy * deltaTime; // update y coordinate
+        this.x += this.dx * deltaTime;
+        this.y += this.dy * deltaTime;
     }
 
     action() { // perform all necessary actions, such as removing the projectile if it leaves the battlefield
-        if ((this.x + this.size >= player.x && this.x <= player.x + player.size) && (this.y + this.size >= player.y && this.y <= player.y + player.size)) {
+        let collision = (this.x + this.size >= player.x && this.x <= player.x + player.size) && (this.y + this.size >= player.y && this.y <= player.y + player.size)
+
+        if (collision) {
             gameState = 'over';
             PlaySound(GAME_OVER_NOISE, GAME_OVER_VOLUME);
         }
         
-        if (this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0) {
+        let exitedScreen = this.x < GAME_DIMENSION - this.size && this.x > 0 && this.y < GAME_DIMENSION - this.size && this.y > 0;
+        if (exitedScreen) {
             this.checkForDeletion = true;
         }
 
@@ -287,9 +285,9 @@ class Projectile {
         }
     }
 
-    draw() { // used to draw the projectile to the canvas
-        ctx.fillStyle = "red"; // set fill style to red
-        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile as a red square to canvas
+    draw() {
+        ctx.fillStyle = "red";
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
@@ -298,7 +296,7 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
     constructor(player) {
         super(player); // perform all the same actions as base class constructor
         this.size += 2 * MIN_BOUNCE_SIZE;
-        this.points = BOUNCY_PROJECTILE_POINTS; // update points value to be 5, 5 points for each bounce
+        this.points = BOUNCY_PROJECTILE_POINTS;
     }
 
     action() {
@@ -307,27 +305,27 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
             PlaySound(GAME_OVER_NOISE, GAME_OVER_VOLUME);
         }
         
-        if (this.x < GAME_DIMENSION - this.size && this.x > 0         // if the projectile has fully entered the battlefield, start checking it
+        if (this.x < GAME_DIMENSION - this.size && this.x > 0 // if the projectile has fully entered the battlefield, start checking it for bounces
             && this.y < GAME_DIMENSION - this.size && this.y > 0) {
-            this.checkForBounce = true
+            this.checkForBounce = true;
         }
 
-        if (this.checkForBounce) {     // once the projectile has entered the battlefield, start checking it
+        if (this.checkForBounce) { 
             if (this.x < 0 || this.x > GAME_DIMENSION - this.size) { // if projectile contacts left or right wall
-                this.dx *= -1; // reverse velocity in x direction, thus 'bouncing' off the wall
-                points += this.points; // add 5 points
+                this.dx *= -1; // reverse velocity in x direction
+                points += this.points;
 
                 PlaySound(BOUNCE_NOISE, BOUNCE_VOLUME);
 
                 if (this.size > MIN_BOUNCE_SIZE) {
                     this.size -= BOUNCE_DECREMENT;
                 } else {
-                    return true;
+                    return true; // return true, removing the projectile
                 }
             }
             if (this.y < 0 || this.y > GAME_DIMENSION - this.size) { // if projectile contacts top or bottom wall
-                this.dy *= -1; // reverse velocity in y direction, thus 'bouncing' off the wall
-                points += this.points; // add 5 points
+                this.dy *= -1; // reverse velocity in y direction
+                points += this.points;
                 
                 PlaySound(BOUNCE_NOISE, BOUNCE_VOLUME);
                 
@@ -340,101 +338,102 @@ class BouncyProjectile extends Projectile { // this projectile derives from Proj
         }
     }
 
-    draw() { // used to draw the projectile to the canvas
-        ctx.fillStyle = `rgb(252, 125, 255)`; // set fill style to pink
-        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to the canvas as a pink square
+    draw() {
+        ctx.fillStyle = `rgb(252, 125, 255)`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
 class HomingProjectile extends Projectile { // this projectile derives from Projectile base class, and homes onto the player periodically
     constructor(player) {
-        super(player); // perform all the same actions as base constructor
-        this.points = HOMING_PROJECTILE_POINTS; // update points to be 5
+        super(player);
+        this.points = HOMING_PROJECTILE_POINTS;
     }
     
     action(deltaTime) {
-        if (super.action()) return true; // perform all the same actions as base action function
+        if (super.action()) return true;
         
         if (Math.random() * homingChance > 0.99) {        // randomly decide whether to redirect toward the player
-            // this.timeUntilPlayer = randomNumberFromRange(1, 2); // assign new speed
-            this.dx = (player.x - this.x) / this.timeUntilPlayer; // assign new velocity in x dimension
-            this.dy = (player.y - this.y) / this.timeUntilPlayer; // assign new velocity in y dimension
+            this.timeUntilPlayer = randomNumberFromRange(1, 2);
+            this.dx = (player.x - this.x) / this.timeUntilPlayer;
+            this.dy = (player.y - this.y) / this.timeUntilPlayer;
 
             PlaySound(HOMING_NOISE, HOMING_VOLUME);
         }
     }
 
-    draw() { // used to draw the projectile to the canvas
-        ctx.fillStyle = "purple"; // update fill style to purple
-        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a purple square
+    draw() {
+        ctx.fillStyle = "purple";
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
 class AcceleratingProjectile extends Projectile { // this class derives from Projectile base class, and accelerates as it moves
     constructor(player) {
-        super(player); // perform all the same actions as base constructor
+        super(player);
 
-        this.points = ACCELERATING_PROJECTILE_POINTS; // update points to be 5
+        this.points = ACCELERATING_PROJECTILE_POINTS;
         this.play = true;
         this.proximity = ACCELERATING_NOISE_PROXIMITY;
     }
 
     action(deltaTime) {
-        if (super.action()) return true; // perform all the same actions as the parent class action() function
+        if (super.action()) return true;
 
         // accelerate the projectile
-        this.dx += (accelerationRate * this.dx * deltaTime); // accelerate in x dimension
-        this.dy += (accelerationRate * this.dy * deltaTime); // accelerate in y dimension
+        this.dx += (accelerationRate * this.dx * deltaTime);
+        this.dy += (accelerationRate * this.dy * deltaTime);
 
         let distance = Math.sqrt(Math.pow(player.x - this.x, 2) + Math.pow(player.y - this.y, 2));
 
-        if ((this.play) && (distance < this.proximity)) {
+        if ((this.play) && (distance < this.proximity)) { // the first frame the projectile is within range of the player, play sound effect
             PlaySound(ACCELERATING_NOISE, ACCLERATING_VOLUME)
             this.play = false;
         }
     }
 
-    draw() { // used to draw the projectile to the canvas
-        ctx.fillStyle = "orange";  // update fill style to orange
-        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as an orange square
+    draw() {
+        ctx.fillStyle = "orange";
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
 class GrowingProjectile extends Projectile { // this class derives from base Projectile, and grows as it moves
     constructor(player) {
-        super(player); // perform all the same actions as base class constructor
-        this.points = GROWING_PROJECTILE_POINTS; // update this.points to be 5
+        super(player);
+        this.points = GROWING_PROJECTILE_POINTS;
     }
 
     action(deltaTime) {
-        if (super.action()) return true; // perform all the same actions as the base class action() function 
+        if (super.action()) return true;
 
-        this.size += growSpeed * deltaTime; // grow the projectile
+        this.size += growSpeed * deltaTime;
 
-        if (Math.floor(this.size) % 11 == 0) {
+        if (Math.floor(this.size) % GROWING_FREQUENCY == 0) { // play the growing sound effect periodically
             PlaySound(GROWING_NOISE, Math.min(GROWING_VOLUME * this.size, 1));
         }
     }
 
     draw() {
-        ctx.fillStyle = `rgb(0, 142, 5)`; // change fill style to green
-        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a green square
+        ctx.fillStyle = `rgb(0, 142, 5)`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
-class GravityProjectile extends Projectile { // this class derives from base Projectile, and draws the player closer to it
+class GravityProjectile extends Projectile { // this class derives from base Projectile and has a gravitational pull
     constructor(player) {
-        super(player); // perform all the same actions as base class constructor
-        this.points = GRAVITY_PROJECTILE_POINTS; // update this.points to be 5
+        super(player);
+        this.points = GRAVITY_PROJECTILE_POINTS;
     }
 
     action(deltaTime) {
-        if (super.action()) return true; // perform all the same actions as the base class action() function 
+        if (super.action()) return true;
 
         let xDistance = player.x - this.x;
         let yDistance = player.y - this.y;
         let Distance = Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2));
 
+        // pull the player in according to their distance and the projectile's size
         if (xDistance < 0) {
             player.x += this.size * gravityStrength * deltaTime / Distance;
         } else {
@@ -451,22 +450,22 @@ class GravityProjectile extends Projectile { // this class derives from base Pro
     }
 
     draw() {
-        ctx.fillStyle = `rgb(77, 0, 255)`; // change fill style to blue
-        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a blue square
+        ctx.fillStyle = `rgb(77, 0, 255)`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
 class SplittingProjectile extends Projectile { // this class derives from base Projectile, and splits into multiple projectiles
     constructor(player) {
-        super(player); // perform all the same actions as base class constructor
+        super(player);
         this.size += 2 * MIN_SPLIT_SIZE;
-        this.points = SPLITTING_PROJECTILE_POINTS; // update this.points to be 5
+        this.points = SPLITTING_PROJECTILE_POINTS;
     }
 
     action(deltaTime) {
-        if (super.action()) return true; // perform all the same actions as the base class action() function 
+        if (super.action()) return true;
 
-        if (Math.random() * splitChance > 0.99 && this.size > MIN_SPLIT_SIZE) {
+        if (Math.random() * splitChance > 0.99 && this.size > MIN_SPLIT_SIZE) { // if the projectile is large enough, randomly split
             let angle = Math.atan(this.dy/this.dx);
             if (this.dx < 0) angle += Math.PI; 
             let speedSquared = Math.pow(this.dx, 2) + Math.pow(this.dy, 2);
@@ -502,13 +501,13 @@ class SplittingProjectile extends Projectile { // this class derives from base P
     }
 
     draw() {
-        ctx.fillStyle = `rgb(255, 230, 0)`; // change fill style to yellow
-        ctx.fillRect(this.x, this.y, this.size, this.size); // draw the projectile to canvas as a yellow square
+        ctx.fillStyle = `rgb(255, 230, 0)`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
     }
 }
 
 // eventListener for controlling the player, pausing/unpausing/restarting game
-document.addEventListener('keydown', (e) => { // add eventListener waiting for keydown
+document.addEventListener('keydown', (e) => {
     switch(e.code) // once a key is pressed
     {
         case 'KeyW': // if the code of the key pressed is W
@@ -517,21 +516,21 @@ document.addEventListener('keydown', (e) => { // add eventListener waiting for k
             }
             break;
         case 'KeyA':
-            if (held_directions.indexOf('A') === -1) { // ditto for A
+            if (held_directions.indexOf('A') === -1) {
                 held_directions.unshift('A');
             }
             break;
         case 'KeyS':
-            if (held_directions.indexOf('S') === -1) { // ditto for S
+            if (held_directions.indexOf('S') === -1) {
                 held_directions.unshift('S');
             }
             break;
         case 'KeyD':
-            if (held_directions.indexOf('D') === -1) { // ditto for D
+            if (held_directions.indexOf('D') === -1) {
                 held_directions.unshift('D');
             }
             break;
-        case 'Space': // if space is the key pressed
+        case 'Space':
             switch(gameState) {
                 case 'title': // if currently on title screen, switch to game
                     RestartGame();
@@ -562,16 +561,16 @@ document.addEventListener('keyup', (e) => { // when a key is released
 
     switch(e.code)
     {
-        case 'KeyW':        // when W is released, remove it from held_directions
+        case 'KeyW': // when W is released, remove it from held_directions
             indexToRemove = held_directions.indexOf('W');
             break;
-        case 'KeyA': // ditto for A
+        case 'KeyA':
             indexToRemove = held_directions.indexOf('A');
             break;
-        case 'KeyS': // ditto for S
+        case 'KeyS':
             indexToRemove = held_directions.indexOf('S');
             break;
-        case 'KeyD': // ditto for D
+        case 'KeyD':
             indexToRemove = held_directions.indexOf('D');
             break;
     }
@@ -589,35 +588,24 @@ canvas.height = GAME_DIMENSION;
 
 let player = new Player(GAME_DIMENSION, PLAYER_SIZE, PLAYER_SPEED);
 
-function main(currentTime) { // main function containing game loop
+function main(currentTime) {
     switch (gameState) {
         case "title":
-            ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
-            // display title screen
+            ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);
             DisplayTitleScreen();
             break;
-        case "game": // if the game is playing, perform all necessary actions
+        case "game":
             ctx.clearRect(0, 0, GAME_DIMENSION, GAME_DIMENSION);    // at the beginning of each frame, clear the canvas
-            //const deltaTime = (currentTime - lastRenderTime) / 1000;  // keep track of how much time has passed, this is to normalize game speed regardless of machine processing speed
             const currentTime = Date.now();
-            const deltaTime = (currentTime - lastRenderTime) / 1000;
+            const deltaTime = (currentTime - lastRenderTime) / 1000; // keep track of time passed since last frame to ensure frame independence
             lastRenderTime = currentTime;
 
-            // add projectiles, want method involving deltaTime
-            // newProjectile variable, add constant * deltaTime each time
-            // when newProjectile breaks to new integer, add a projectile
-            // come up with random number 1-1000
-            // 1-900 base, 901-950 bounce, 951-960 homing, etc.
-            // each frame, decrement base by deltaTIme * constant, add same amount
-            // to one of the specials at random
             SpawnNewProjectile(deltaTime);
-
-            // lastRenderTime = currentTime;
         
-            player.update(deltaTime); // update the player
+            player.update(deltaTime);
             
             UpdateProjectiles(deltaTime);
-            player.draw(); // draw character
+            player.draw();
             DrawProjectiles();
             DisplayPoints();
 
@@ -625,10 +613,10 @@ function main(currentTime) { // main function containing game loop
 
             window.requestAnimationFrame(main); 
             break;
-        case "pause": // if the game is paused, do nothing but display pause message
+        case "pause":
             DisplayPauseMessage();
             break;
-        case "over": // if the game is over, display gameover screen
+        case "over":
             DisplayGameOverMessage();
             break;       
     }
