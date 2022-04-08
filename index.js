@@ -96,7 +96,7 @@ function SpawnNewProjectile(deltaTime) {
         if (projectileType < baseProjectilePercentChance) {
             projectiles.push(new Projectile(player));
         } else {
-            projectileType = randomNumberFromRange(1, 6);
+            projectileType = randomNumberFromRange(0, 6);
     
             if (projectileType <= 1) {
                 projectiles.push(BouncyProjectile(player));
