@@ -92,26 +92,25 @@ function SpawnNewProjectile(deltaTime) {
 
     if (Math.floor(newProjectile) - Math.floor(PreviousValue) > 0) {
         let projectileType = randomNumberFromRange(1, 100);
-        projectiles.push(new BouncyProjectile(player));
-        // if (projectileType < baseProjectilePercentChance) {
-        //     projectiles.push(new Projectile(player));
-        // } else {
-        //     projectileType = randomNumberFromRange(0, 6);
+        if (projectileType < baseProjectilePercentChance) {
+            projectiles.push(new Projectile(player));
+        } else {
+            projectileType = randomNumberFromRange(0, 6);
     
-        //     if (projectileType <= 1) {
-        //         projectiles.push(BouncyProjectile(player));
-        //     } else if (projectileType <= 2) {
-        //         projectiles.push(new HomingProjectile(player));
-        //     } else if (projectileType <= 3) {
-        //         projectiles.push(new AcceleratingProjectile(player));
-        //     } else if (projectileType <= 4) {
-        //         projectiles.push(new GrowingProjectile(player));
-        //     } else if (projectileType <= 5) {
-        //         projectiles.push(new GravityProjectile(player));
-        //     } else {
-        //         projectiles.push(new SplittingProjectile(player));
-        //     }
-        // }
+            if (projectileType <= 1) {
+                projectiles.push(BouncyProjectile(player));
+            } else if (projectileType <= 2) {
+                projectiles.push(new HomingProjectile(player));
+            } else if (projectileType <= 3) {
+                projectiles.push(new AcceleratingProjectile(player));
+            } else if (projectileType <= 4) {
+                projectiles.push(new GrowingProjectile(player));
+            } else if (projectileType <= 5) {
+                projectiles.push(new GravityProjectile(player));
+            } else {
+                projectiles.push(new SplittingProjectile(player));
+            }
+        }
     }
 }
 
